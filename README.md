@@ -1,5 +1,10 @@
 # Subscription
 
+![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg)
+![Platforms](https://img.shields.io/badge/Platforms-iOS%2017.0%2B%20%7C%20macOS%2014.0%2B-blue.svg)
+![SPM](https://img.shields.io/badge/SPM-compatible-green.svg)
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+
 RevenueCatを使用したサブスクリプション管理のためのSwiftパッケージ
 
 ## 概要
@@ -12,15 +17,33 @@ SubscriptionパッケージはRevenueCatと統合し、アプリ内課金（サ�
 - ✅ 利用可能なプランの取得
 - ✅ プランの購入と復元
 - ✅ ユーザー認証との連携
-- ✅ SwiftUI対応のモダンなAPI（async/await、AsyncStream）
-- ✅ 完全なSendableサポート
+- ✅ SwiftUI対応（async/await、AsyncStream）
 - ✅ Actor-basedのスレッドセーフな設計
 
 ## 要件
 
-- iOS 17.0+
-- Swift 5.9+
-- RevenueCat SDK 5.46.0+
+- **iOS** 17.0+ / **macOS** 14.0+
+- **Swift** 6.0+
+- **RevenueCat SDK** 5.14.0+
+
+## 前提条件
+
+### RevenueCatプロジェクトのセットアップ
+
+[RevenueCat Dashboard](https://app.revenuecat.com/)で以下の設定を完了してください：
+
+1. **プロジェクトの作成**
+   - 新規プロジェクトを作成
+   - APIキーを取得
+
+2. **プロダクトの設定**
+   - App Store Connect / Google Play Consoleでサブスクリプションプロダクトを作成
+   - RevenueCat Dashboardでプロダクトをインポート
+   - エンタイトルメントを設定（例: "premium"）
+
+3. **オファリングの作成**
+   - 月額・年額などのプランをオファリングとしてグループ化
+   - デフォルトオファリングを設定
 
 ## インストール
 
@@ -30,49 +53,52 @@ SubscriptionパッケージはRevenueCatと統合し、アプリ内課金（サ�
 
 ```swift
 dependencies: [
-    .package(url: "https://github.com/your-repo/Subscription.git", from: "1.0.0")
+    .package(url: "https://github.com/no-problem-dev/swift-subscription.git", from: "1.0.0")
 ]
 ```
 
-または、Xcode で `File > Add Package Dependencies...` から追加できます。
+または、Xcode で `File > Add Package Dependencies...` から `https://github.com/no-problem-dev/swift-subscription` を追加できます。
 
-## セットアップ
+## クイックスタート
 
-### 1. RevenueCat APIキーの取得
-
-[RevenueCat Dashboard](https://app.revenuecat.com/)でプロジェクトを作成し、APIキーを取得してください。
-
-### 2. 初期化
+### 1. 初期化
 
 ```swift
 import Subscription
 
-// 設定の作成
-let config = SubscriptionConfiguration(
-    apiKey: "your_revenuecat_api_key",
-    entitlementId: "premium"
-)
+@main
+struct YourApp: App {
+    init() {
+        let config = SubscriptionConfiguration(
+            apiKey: "your_revenuecat_api_key",
+            entitlementId: "premium"
+        )
+        let subscriptionUseCase = SubscriptionUseCaseImpl(configuration: config)
+    }
 
-// ユースケースの初期化
-let subscriptionUseCase = SubscriptionUseCaseImpl(configuration: config)
-```
-
-## 使用方法
-
-### サブスクリプション状態の確認
-
-```swift
-// 最新の状態を取得
-let status = try await subscriptionUseCase.checkSubscriptionStatus()
-
-if status.isActive {
-    print("加入中: \(status.activePackageId ?? "不明")")
-} else {
-    print("未加入")
+    var body: some Scene {
+        WindowGroup {
+            ContentView()
+        }
+    }
 }
 ```
 
-### プランの取得と購入
+### 2. サブスクリプション状態の確認
+
+```swift
+// キャッシュされた状態を即座に取得
+let status = await subscriptionUseCase.getSubscriptionStatus()
+
+// サーバーから最新の状態を取得
+let latestStatus = try await subscriptionUseCase.checkSubscriptionStatus()
+
+if latestStatus.isActive {
+    print("加入中: \(latestStatus.activePackageId ?? "不明")")
+}
+```
+
+### 3. プランの取得と購入
 
 ```swift
 // 利用可能なプランを取得
@@ -81,48 +107,16 @@ let offerings = try await subscriptionUseCase.loadOfferings()
 if let packages = offerings?.packages {
     for package in packages {
         print("\(package.title): \(package.price)")
-
-        if package.duration == .annual, let monthlyPrice = package.pricePerMonth {
-            print("月額換算: \(monthlyPrice)")
-        }
     }
 
     // プランを購入
-    if let annualPackage = packages.first(where: { $0.duration == .annual }) {
-        do {
-            let status = try await subscriptionUseCase.purchase(packageId: annualPackage.id)
-            if status.isActive {
-                print("購入成功！")
-            }
-        } catch let error as SubscriptionError {
-            switch error {
-            case .purchaseCancelled:
-                // ユーザーがキャンセル - エラー表示不要
-                break
-            default:
-                print("エラー: \(error.localizedDescription)")
-            }
-        }
+    if let package = packages.first {
+        let status = try await subscriptionUseCase.purchase(packageId: package.id)
     }
 }
 ```
 
-### 購入の復元
-
-```swift
-do {
-    let status = try await subscriptionUseCase.restorePurchases()
-    if status.isActive {
-        print("復元成功: \(status.activePackageId ?? "不明")")
-    } else {
-        print("復元可能なサブスクリプションが見つかりませんでした")
-    }
-} catch {
-    print("復元エラー: \(error.localizedDescription)")
-}
-```
-
-### リアルタイム監視
+### 4. リアルタイム監視
 
 ```swift
 // サブスクリプション状態の変化を監視
@@ -130,11 +124,42 @@ Task {
     for await status in subscriptionUseCase.observeSubscriptionStatus() {
         if status.isActive {
             // プレミアム機能を有効化
-            enablePremiumFeatures()
-        } else {
-            // プレミアム機能を無効化
-            disablePremiumFeatures()
         }
+    }
+}
+```
+
+## 使用例
+
+### SwiftUIでの統合
+
+```swift
+import SwiftUI
+import Subscription
+
+struct ContentView: View {
+    @Environment(\.subscriptionUseCase) private var subscriptionUseCase
+    @State private var status: SubscriptionStatus = .inactive
+
+    var body: some View {
+        VStack {
+            if status.isActive {
+                Text("プレミアム会員")
+            } else {
+                Button("プレミアムプランに登録") {
+                    Task { await showPaywall() }
+                }
+            }
+        }
+        .task {
+            for await newStatus in subscriptionUseCase.observeSubscriptionStatus() {
+                status = newStatus
+            }
+        }
+    }
+
+    private func showPaywall() async {
+        // ペイウォール表示の実装
     }
 }
 ```
@@ -153,157 +178,21 @@ func userDidLogout() async throws {
 }
 ```
 
-### SwiftUIでの使用例
-
-```swift
-import SwiftUI
-import Subscription
-
-struct ContentView: View {
-    @State private var subscriptionStatus: SubscriptionStatus = .inactive
-
-    let subscriptionUseCase: SubscriptionUseCase
-
-    var body: some View {
-        VStack {
-            if subscriptionStatus.isActive {
-                Text("プレミアム会員")
-                    .font(.headline)
-            } else {
-                Button("プレミアムプランを見る") {
-                    Task {
-                        await showPaywall()
-                    }
-                }
-            }
-        }
-        .task {
-            // 初回の状態取得
-            subscriptionStatus = await subscriptionUseCase.getSubscriptionStatus()
-
-            // リアルタイム監視
-            for await status in subscriptionUseCase.observeSubscriptionStatus() {
-                subscriptionStatus = status
-            }
-        }
-    }
-
-    private func showPaywall() async {
-        // ペイウォール表示の実装
-    }
-}
-```
-
-## アーキテクチャ
-
-### パッケージ構造
-
-```
-Subscription/
-├── Public/          # 公開API
-│   ├── Model/       # データモデル
-│   ├── UseCase/     # ユースケース（プロトコルと実装）
-│   └── DI/          # 設定
-└── Internal/        # 内部実装（非公開）
-    ├── Domain/      # ドメインロジック
-    ├── Repository/  # RevenueCat統合
-    └── Model/       # 内部状態管理
-```
-
-### 主要な型
-
-#### `SubscriptionUseCase`
-サブスクリプション機能の主要なインターフェース。すべての操作はこのプロトコルを通じて行います。
-
-#### `SubscriptionStatus`
-ユーザーのサブスクリプション状態を表現：
-- `isActive`: 加入しているか
-- `activePackageId`: 加入中のプランID
-- `activeEntitlementId`: エンタイトルメントID
-- `expirationDate`: 有効期限
-
-#### `SubscriptionOffering`
-購入可能なプランのグループ。通常、月額・年額・買い切りなどが含まれます。
-
-#### `SubscriptionError`
-サブスクリプション処理で発生する可能性のあるエラー。`LocalizedError`に準拠しているため、ユーザーフレンドリーなエラーメッセージを取得できます。
-
-## ベストプラクティス
-
 ### エラーハンドリング
 
 ```swift
 do {
     let status = try await subscriptionUseCase.purchase(packageId: packageId)
-    // 成功時の処理
 } catch let error as SubscriptionError {
     switch error {
     case .purchaseCancelled:
-        // ユーザーがキャンセルした場合は何もしない
+        // ユーザーがキャンセル - エラー表示不要
         break
     case .networkError:
         // ネットワークエラーの場合は再試行を促す
         showRetryAlert()
     default:
-        // その他のエラーはメッセージを表示
         showAlert(message: error.localizedDescription)
-    }
-} catch {
-    // 予期しないエラー
-    showAlert(message: "予期しないエラーが発生しました")
-}
-```
-
-### 状態管理
-
-```swift
-// ✅ Good: キャッシュされた状態を即座に取得
-let status = await subscriptionUseCase.getSubscriptionStatus()
-
-// ✅ Good: サーバーから最新の状態を取得（必要な場合のみ）
-let status = try await subscriptionUseCase.checkSubscriptionStatus()
-
-// ❌ Bad: 頻繁にサーバーに問い合わせる
-Task {
-    while true {
-        try await subscriptionUseCase.checkSubscriptionStatus()
-        try await Task.sleep(for: .seconds(1))
-    }
-}
-```
-
-### ローディング状態の管理
-
-各Viewが自身のローディング状態を管理することを推奨します：
-
-```swift
-struct PurchaseButton: View {
-    @State private var isPurchasing = false
-
-    var body: some View {
-        Button {
-            Task {
-                await purchase()
-            }
-        } label: {
-            if isPurchasing {
-                ProgressView()
-            } else {
-                Text("購入する")
-            }
-        }
-        .disabled(isPurchasing)
-    }
-
-    private func purchase() async {
-        isPurchasing = true
-        defer { isPurchasing = false }
-
-        do {
-            _ = try await subscriptionUseCase.purchase(packageId: packageId)
-        } catch {
-            // エラー処理
-        }
     }
 }
 ```
@@ -313,25 +202,26 @@ struct PurchaseButton: View {
 ### APIキーが無効
 
 **症状**: `.notConfigured`エラーが発生
-**解決策**: RevenueCat DashboardでAPIキーを確認し、正しく設定されているか確認してください。
+
+**解決策**: RevenueCat DashboardでAPIキーを確認してください。
 
 ### プランが表示されない
 
 **症状**: `loadOfferings()`が`nil`を返す
+
 **解決策**:
 1. RevenueCat Dashboardでプランが正しく設定されているか確認
 2. App Store Connect / Google Play Consoleでプランが承認されているか確認
 3. Sandbox環境でテストしている場合、テストアカウントでログインしているか確認
 
-### 購入がキャンセルされる
+## 依存関係
 
-**症状**: `.purchaseCancelled`エラーが頻繁に発生
-**解決策**: これはユーザーが意図的にキャンセルした場合の正常な動作です。エラーメッセージを表示する必要はありません。
+- [RevenueCat SDK](https://github.com/RevenueCat/purchases-ios) (5.14.0+)
 
 ## ライセンス
 
-このパッケージはMITライセンスの下で公開されています。
+MIT License
 
 ## サポート
 
-問題が発生した場合や機能リクエストがある場合は、GitHubのIssueを作成してください。
+問題が発生した場合や機能リクエストがある場合は、[GitHubのIssue](https://github.com/no-problem-dev/swift-subscription/issues)を作成してください。
