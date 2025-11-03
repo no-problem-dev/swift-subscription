@@ -1,11 +1,11 @@
 # Subscription
 
+RevenueCatを使用したサブスクリプション管理のためのSwiftパッケージ
+
 ![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg)
 ![Platforms](https://img.shields.io/badge/Platforms-iOS%2017.0%2B%20%7C%20macOS%2014.0%2B-blue.svg)
 ![SPM](https://img.shields.io/badge/SPM-compatible-green.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
-
-RevenueCatを使用したサブスクリプション管理のためのSwiftパッケージ
 
 ## 概要
 
@@ -20,7 +20,7 @@ SubscriptionパッケージはRevenueCatと統合し、アプリ内課金（サ�
 - ✅ SwiftUI対応（async/await、AsyncStream）
 - ✅ Actor-basedのスレッドセーフな設計
 
-## 要件
+## 必要要件
 
 - **iOS** 17.0+ / **macOS** 14.0+
 - **Swift** 6.0+
@@ -196,23 +196,6 @@ do {
     }
 }
 ```
-
-## トラブルシューティング
-
-### APIキーが無効
-
-**症状**: `.notConfigured`エラーが発生
-
-**解決策**: RevenueCat DashboardでAPIキーを確認してください。
-
-### プランが表示されない
-
-**症状**: `loadOfferings()`が`nil`を返す
-
-**解決策**:
-1. RevenueCat Dashboardでプランが正しく設定されているか確認
-2. App Store Connect / Google Play Consoleでプランが承認されているか確認
-3. Sandbox環境でテストしている場合、テストアカウントでログインしているか確認
 
 ## 依存関係
 
