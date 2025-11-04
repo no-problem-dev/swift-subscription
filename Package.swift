@@ -17,7 +17,8 @@ let package = Package(
     ],
     dependencies: [
         // RevenueCat SDK
-        .package(url: "https://github.com/RevenueCat/purchases-ios.git", from: "5.14.0")
+        .package(url: "https://github.com/RevenueCat/purchases-ios.git", from: "5.14.0"),
+        .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.0")
     ],
     targets: [
         .target(
