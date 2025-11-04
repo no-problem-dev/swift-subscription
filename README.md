@@ -7,6 +7,8 @@ RevenueCatを使用したサブスクリプション管理のためのSwiftパ�
 ![SPM](https://img.shields.io/badge/SPM-compatible-green.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
+📚 **[完全なドキュメント](https://no-problem-dev.github.io/swift-subscription/documentation/subscription/)**
+
 ## 概要
 
 SubscriptionパッケージはRevenueCatと統合し、アプリ内課金（サブスクリプション）の実装を簡潔に行うための高レベルAPIを提供します。
