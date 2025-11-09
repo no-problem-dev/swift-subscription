@@ -58,3 +58,5 @@
 [未リリース]: https://github.com/no-problem-dev/swift-subscription/compare/v1.0.4...HEAD
 [1.0.4]: https://github.com/no-problem-dev/swift-subscription/compare/v1.0.3...v1.0.4
 [1.0.3]: https://github.com/no-problem-dev/swift-subscription/compare/v1.0.2...v1.0.3
+
+<!-- Auto-generated on 2025-11-09T05:05:50Z by release workflow -->
