@@ -5,6 +5,15 @@
 このフォーマットは [Keep a Changelog](https://keepachangelog.com/ja/1.0.0/) に基づいており、
 このプロジェクトは [Semantic Versioning](https://semver.org/lang/ja/) に準拠しています。
 
+## [未リリース]
+
+なし
+
+## [1.0.4] - 2025-11-09
+
+### 修正
+- 自動リリースワークフローのメッセージを完全に日本語に統一（PRディスクリプション、リリースノート、ログメッセージ）
+
 ## [1.0.3] - 2025-11-04
 
 ### 追加
@@ -45,3 +54,7 @@
 - SwiftUI 対応（async/await、AsyncStream）
 - Actor-based のスレッドセーフな設計
 - iOS 17.0+ および macOS 14.0+ サポート
+
+[未リリース]: https://github.com/no-problem-dev/swift-subscription/compare/v1.0.4...HEAD
+[1.0.4]: https://github.com/no-problem-dev/swift-subscription/compare/v1.0.3...v1.0.4
+[1.0.3]: https://github.com/no-problem-dev/swift-subscription/compare/v1.0.2...v1.0.3
