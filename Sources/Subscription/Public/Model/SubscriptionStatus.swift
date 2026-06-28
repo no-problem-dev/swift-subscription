@@ -1,8 +1,8 @@
 import Foundation
 
-/// ユーザーのサブスクリプション状態を表します。
+/// ユーザーのサブスクリプション状態を表す。
 ///
-/// この構造体は、ユーザーが現在どのサブスクリプションプランに加入しているかの情報を保持します。
+/// ユーザーが現在どのサブスクリプションプランに加入しているかの情報を保持する。
 ///
 /// ## 使用例
 /// ```swift
@@ -30,6 +30,13 @@ public struct SubscriptionStatus: Sendable, Equatable {
     /// サブスクリプションの有効期限（買い切りプランや加入していない場合は `nil`）
     public let expirationDate: Date?
 
+    /// `SubscriptionStatus` を生成する。
+    ///
+    /// - Parameters:
+    ///   - isActive: 有効なサブスクリプションに加入しているかどうか。
+    ///   - activeEntitlementId: 有効なエンタイトルメント ID。加入していない場合は `nil`。
+    ///   - activePackageId: 加入中のプランのパッケージ ID。加入していない場合は `nil`。
+    ///   - expirationDate: サブスクリプションの有効期限。買い切りプランや加入していない場合は `nil`。
     public init(
         isActive: Bool,
         activeEntitlementId: String? = nil,

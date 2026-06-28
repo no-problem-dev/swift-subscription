@@ -40,7 +40,7 @@ ContentView()
 
 ## Topics
 
-### Essentials
+### はじめに
 
 - <doc:GettingStarted>
 

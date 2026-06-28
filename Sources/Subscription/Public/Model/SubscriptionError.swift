@@ -41,6 +41,7 @@ public enum SubscriptionError: Error, LocalizedError {
     /// その他のエラー
     case unknown(Error)
 
+    /// エラーの日本語説明文。`LocalizedError` 準拠により `localizedDescription` で参照される。
     public var errorDescription: String? {
         switch self {
         case .notConfigured:

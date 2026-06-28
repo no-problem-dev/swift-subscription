@@ -22,11 +22,14 @@ public extension EnvironmentValues {
 
 /// SubscriptionUseCaseを注入するためのViewModifier
 ///
-/// パッケージ境界を越えて環境値を確実に伝播させます。
-/// 通常は`View.subscriptionUseCase(_:)`メソッド経由で使用します。
+/// パッケージ境界を越えて環境値を確実に伝播させる。
+/// 通常は `View.subscriptionUseCase(_:)` モディファイア経由で使用する。
 public struct SubscriptionUseCaseModifier: ViewModifier {
     private let subscriptionUseCase: SubscriptionUseCase
 
+    /// `SubscriptionUseCaseModifier` を生成する。
+    ///
+    /// - Parameter subscriptionUseCase: 環境値として注入する `SubscriptionUseCase` インスタンス。
     public init(subscriptionUseCase: SubscriptionUseCase) {
         self.subscriptionUseCase = subscriptionUseCase
     }

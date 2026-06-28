@@ -3,23 +3,23 @@ import Foundation
 /// `SubscriptionUseCase` の RevenueCat バックエンド実装。
 ///
 /// `RevenueCatRepository` を介して App Store の課金処理を行い、
-/// 内部の `SubscriptionState` アクターでサブスクリプション状態をキャッシュします。
+/// 内部の `SubscriptionState` アクターでサブスクリプション状態をキャッシュする。
 ///
 /// 初期化時に RevenueCat SDK を設定し、バックグラウンドでサブスクリプション状態の
-/// 変化を監視するタスクを起動します。インスタンスを破棄すると監視タスクは自動的に
-/// キャンセルされます。
+/// 変化を監視するタスクを起動する。インスタンスを破棄すると監視タスクは自動的に
+/// キャンセルされる。
 ///
-/// - Note: このクラスは `Sendable` に準拠しており、Swift Concurrency 環境で安全に使用できます。
-///   インスタンスは通常アプリのルートで 1 つ生成し、環境値経由で配布してください。
+/// - Note: このクラスは `Sendable` に準拠しており、Swift Concurrency 環境で安全に使用できる。
+///   インスタンスは通常アプリのルートで 1 つ生成し、環境値経由で配布する。
 public final class SubscriptionUseCaseImpl: SubscriptionUseCase {
     private let state: SubscriptionState
     private let repository: SubscriptionRepository
     nonisolated(unsafe) private var observationTask: Task<Void, Never>?
 
-    /// `SubscriptionConfiguration` を使ってインスタンスを生成します。
+    /// `SubscriptionConfiguration` を使ってインスタンスを生成する。
     ///
-    /// このイニシャライザは RevenueCat SDK を設定し、サブスクリプション状態の変化を
-    /// バックグラウンドで継続的に監視するタスクを起動します。
+    /// RevenueCat SDK を設定し、サブスクリプション状態の変化を
+    /// バックグラウンドで継続的に監視するタスクを起動する。
     ///
     /// - Parameter configuration: RevenueCat API キーとエンタイトルメント ID を含む設定値。
     public init(configuration: SubscriptionConfiguration) {

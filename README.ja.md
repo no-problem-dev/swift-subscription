@@ -1,58 +1,58 @@
 # Subscription
 
-A Swift package for subscription management using RevenueCat.
+RevenueCat を使用したサブスクリプション管理のための Swift パッケージ。
 
 ![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg)
 ![Platforms](https://img.shields.io/badge/Platforms-iOS%2017.0%2B%20%7C%20macOS%2014.0%2B-blue.svg)
 ![SPM](https://img.shields.io/badge/SPM-compatible-green.svg)
 ![License](https://img.shields.io/badge/License-MIT-yellow.svg)
 
-English | [日本語](./README.ja.md)
+[English](./README.md) | 日本語
 
-📚 **[Full Documentation](https://no-problem-dev.github.io/swift-subscription/documentation/subscription/)**
+📚 **[完全なドキュメント](https://no-problem-dev.github.io/swift-subscription/documentation/subscription/)**
 
-## Overview
+## 概要
 
-The `Subscription` package integrates with RevenueCat to provide a high-level API for implementing in-app purchases and subscriptions.
+`Subscription` パッケージは RevenueCat と統合し、アプリ内課金（サブスクリプション）の実装を簡潔に行うための高レベル API を提供します。
 
-### Features
+### 主な機能
 
-- ✅ Check and observe subscription status
-- ✅ Fetch available plans
-- ✅ Purchase and restore plans
-- ✅ User authentication integration
-- ✅ SwiftUI-ready (async/await, AsyncStream)
-- ✅ Actor-based thread-safe design
+- ✅ サブスクリプション状態の確認と監視
+- ✅ 利用可能なプランの取得
+- ✅ プランの購入と復元
+- ✅ ユーザー認証との連携
+- ✅ SwiftUI 対応（async/await、AsyncStream）
+- ✅ Actor-based のスレッドセーフな設計
 
-## Requirements
+## 必要要件
 
 - **iOS** 17.0+ / **macOS** 14.0+
 - **Swift** 6.0+
 - **RevenueCat SDK** 5.14.0+
 
-## Prerequisites
+## 前提条件
 
-### RevenueCat Project Setup
+### RevenueCat プロジェクトのセットアップ
 
-Complete the following steps in the [RevenueCat Dashboard](https://app.revenuecat.com/):
+[RevenueCat Dashboard](https://app.revenuecat.com/) で以下の設定を完了してください：
 
-1. **Create a project**
-   - Create a new project and obtain your API key
+1. **プロジェクトの作成**
+   - 新規プロジェクトを作成して API キーを取得
 
-2. **Configure products**
-   - Create subscription products in App Store Connect / Google Play Console
-   - Import products into the RevenueCat Dashboard
-   - Configure entitlements (e.g., "premium")
+2. **プロダクトの設定**
+   - App Store Connect / Google Play Console でサブスクリプションプロダクトを作成
+   - RevenueCat Dashboard でプロダクトをインポート
+   - エンタイトルメントを設定（例: "premium"）
 
-3. **Create an offering**
-   - Group plans (monthly, annual, etc.) into an offering
-   - Set the default offering
+3. **オファリングの作成**
+   - 月額・年額などのプランをオファリングとしてグループ化
+   - デフォルトオファリングを設定
 
-## Installation
+## インストール
 
 ### Swift Package Manager
 
-Add the following to your `Package.swift`:
+`Package.swift` に以下を追加してください：
 
 ```swift
 dependencies: [
@@ -60,11 +60,11 @@ dependencies: [
 ]
 ```
 
-Or add it via `File > Add Package Dependencies...` in Xcode using `https://github.com/no-problem-dev/swift-subscription`.
+または、Xcode で `File > Add Package Dependencies...` から `https://github.com/no-problem-dev/swift-subscription` を追加できます。
 
-## Quick Start
+## クイックスタート
 
-### 1. Initialize
+### 1. 初期化
 
 ```swift
 import Subscription
@@ -76,24 +76,24 @@ let config = SubscriptionConfiguration(
 let subscriptionUseCase = SubscriptionUseCaseImpl(configuration: config)
 ```
 
-### 2. Check Subscription Status
+### 2. サブスクリプション状態の確認
 
 ```swift
-// Get cached status immediately
+// キャッシュされた状態を即座に取得
 let status = await subscriptionUseCase.getSubscriptionStatus()
 
-// Fetch the latest status from the server
+// サーバーから最新の状態を取得
 let latestStatus = try await subscriptionUseCase.checkSubscriptionStatus()
 
 if latestStatus.isActive {
-    print("Active plan: \(latestStatus.activePackageId ?? "unknown")")
+    print("加入中: \(latestStatus.activePackageId ?? "不明")")
 }
 ```
 
-### 3. Fetch and Purchase Plans
+### 3. プランの取得と購入
 
 ```swift
-// Fetch available plans
+// 利用可能なプランを取得
 let offerings = try await subscriptionUseCase.loadOfferings()
 
 if let packages = offerings?.packages {
@@ -101,29 +101,29 @@ if let packages = offerings?.packages {
         print("\(package.title): \(package.price)")
     }
 
-    // Purchase a plan
+    // プランを購入
     if let package = packages.first {
         let status = try await subscriptionUseCase.purchase(packageId: package.id)
     }
 }
 ```
 
-### 4. Real-time Observation
+### 4. リアルタイム監視
 
 ```swift
-// Observe subscription status changes
+// サブスクリプション状態の変化を監視
 Task {
     for await status in subscriptionUseCase.observeSubscriptionStatus() {
         if status.isActive {
-            // Enable premium features
+            // プレミアム機能を有効化
         }
     }
 }
 ```
 
-## Usage Examples
+## 使用例
 
-### SwiftUI Integration
+### SwiftUI での統合
 
 ```swift
 import SwiftUI
@@ -136,9 +136,9 @@ struct ContentView: View {
     var body: some View {
         VStack {
             if status.isActive {
-                Text("Premium Member")
+                Text("プレミアム会員")
             } else {
-                Button("Subscribe to Premium") {
+                Button("プレミアムプランに登録") {
                     Task { await showPaywall() }
                 }
             }
@@ -152,12 +152,12 @@ struct ContentView: View {
     }
 
     private func showPaywall() async {
-        // Paywall presentation
+        // ペイウォール表示の実装
     }
 }
 ```
 
-Inject the use case at the App entry point:
+App エントリーポイントで DI します：
 
 ```swift
 @main
@@ -175,21 +175,21 @@ struct MyApp: App {
 }
 ```
 
-### User Authentication Integration
+### ユーザー認証との連携
 
 ```swift
-// On user login
+// ユーザーログイン時
 func userDidLogin(userId: String) async throws {
     try await subscriptionUseCase.syncUser(userId: userId)
 }
 
-// On user logout
+// ユーザーログアウト時
 func userDidLogout() async throws {
     try await subscriptionUseCase.clearUser()
 }
 ```
 
-### Error Handling
+### エラーハンドリング
 
 ```swift
 do {
@@ -197,10 +197,10 @@ do {
 } catch let error as SubscriptionError {
     switch error {
     case .purchaseCancelled:
-        // User cancelled — no error display needed
+        // ユーザーがキャンセル - エラー表示不要
         break
     case .networkError:
-        // Prompt retry on network error
+        // ネットワークエラーの場合は再試行を促す
         showRetryAlert()
     default:
         showAlert(message: error.localizedDescription)
@@ -208,14 +208,14 @@ do {
 }
 ```
 
-## Dependencies
+## 依存関係
 
 - [RevenueCat SDK](https://github.com/RevenueCat/purchases-ios) (5.14.0+)
 
-## License
+## ライセンス
 
 MIT License
 
-## Support
+## サポート
 
-For issues or feature requests, please create a [GitHub Issue](https://github.com/no-problem-dev/swift-subscription/issues).
+問題が発生した場合や機能リクエストがある場合は、[GitHub の Issue](https://github.com/no-problem-dev/swift-subscription/issues) を作成してください。

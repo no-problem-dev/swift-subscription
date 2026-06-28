@@ -14,7 +14,7 @@ public enum PackageDuration: String, Sendable {
 
 /// 購入可能なサブスクリプションプランの情報
 ///
-/// App Store / Google Play Storeで設定されたプランの詳細情報を保持します。
+/// App Store / Google Play Storeで設定されたプランの詳細情報を保持する。
 public struct SubscriptionPackage: Sendable, Identifiable {
     /// プランを一意に識別するID
     public let id: String
@@ -34,6 +34,15 @@ public struct SubscriptionPackage: Sendable, Identifiable {
     /// プランの課金期間
     public let duration: PackageDuration
 
+    /// `SubscriptionPackage` を生成する。
+    ///
+    /// - Parameters:
+    ///   - id: プランを一意に識別する ID。
+    ///   - title: プランの表示名。
+    ///   - description: プランの説明文。
+    ///   - price: 価格の表示文字列（例: `"¥6,000"`）。
+    ///   - pricePerMonth: 月額換算の価格表示文字列。年額プランのみ設定し、それ以外は `nil`。
+    ///   - duration: プランの課金期間。
     public init(
         id: String,
         title: String,
@@ -72,6 +81,11 @@ public struct SubscriptionOffering: Sendable, Identifiable {
     /// 購入可能なプランの配列
     public let packages: [SubscriptionPackage]
 
+    /// `SubscriptionOffering` を生成する。
+    ///
+    /// - Parameters:
+    ///   - id: オファリングを一意に識別する ID。
+    ///   - packages: 購入可能なプランの配列。
     public init(id: String, packages: [SubscriptionPackage]) {
         self.id = id
         self.packages = packages

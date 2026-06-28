@@ -2,15 +2,15 @@
 
 `Subscription` ライブラリを Swift Package Manager で導入し、サブスクリプション機能を実装する手順。
 
-## Installation
+## インストール
 
-`Package.swift` の `dependencies` に追加します。
+`Package.swift` の `dependencies` に追加する。
 
 ```swift
 dependencies: [
     .package(
         url: "https://github.com/no-problem-dev/swift-subscription.git",
-        from: "1.0.0"
+        from: "1.0.4"
     )
 ],
 targets: [
@@ -23,12 +23,12 @@ targets: [
 ]
 ```
 
-## Basic Usage
+## 基本的な使い方
 
 ### 1. 設定とインスタンス生成
 
 RevenueCat ダッシュボードで取得した API キーと、エンタイトルメント ID を使って
-`SubscriptionConfiguration` を作成し、`SubscriptionUseCaseImpl` を初期化します。
+`SubscriptionConfiguration` を作成し、`SubscriptionUseCaseImpl` を初期化する。
 
 ```swift
 import Subscription
@@ -40,7 +40,7 @@ let config = SubscriptionConfiguration(
 let subscriptionUseCase: SubscriptionUseCase = SubscriptionUseCaseImpl(configuration: config)
 ```
 
-SwiftUI アプリでは App エントリーポイントで DI します。
+SwiftUI アプリでは App エントリーポイントで DI する。
 
 ```swift
 @main
@@ -58,7 +58,7 @@ struct MyApp: App {
 }
 ```
 
-View 側では `@Environment` で受け取ります。
+View 側では `@Environment` で受け取る。
 
 ```swift
 struct PaywallView: View {
@@ -68,9 +68,10 @@ struct PaywallView: View {
 
 ### 2. 商品取得
 
-利用可能なプランを `loadOfferings()` で取得します。
+利用可能なプランを `loadOfferings()` で取得する。
 
 ```swift
+guard let subscriptionUseCase else { return }
 let offering = try await subscriptionUseCase.loadOfferings()
 if let packages = offering?.packages {
     for package in packages {
@@ -82,8 +83,8 @@ if let packages = offering?.packages {
 
 ### 3. 購入
 
-`purchase(packageId:)` にプランの `id` を渡して購入します。
-ユーザーがキャンセルした場合は `SubscriptionError.purchaseCancelled` がスローされます。
+`purchase(packageId:)` にプランの `id` を渡して購入する。
+ユーザーがキャンセルした場合は `SubscriptionError.purchaseCancelled` がスローされる。
 
 ```swift
 do {
@@ -101,11 +102,12 @@ do {
 
 ### 4. サブスクリプション状態の監視
 
-`observeSubscriptionStatus()` は `AsyncStream<SubscriptionStatus>` を返します。
-RevenueCat からのプッシュ通知（購入完了・期限切れ）に応じてリアルタイムで更新されます。
+`observeSubscriptionStatus()` は `AsyncStream<SubscriptionStatus>` を返す。
+RevenueCat からのプッシュ通知（購入完了・期限切れ）に応じてリアルタイムで更新される。
 
 ```swift
 Task {
+    guard let subscriptionUseCase else { return }
     for await status in subscriptionUseCase.observeSubscriptionStatus() {
         await MainActor.run {
             isPremium = status.isActive
@@ -114,15 +116,16 @@ Task {
 }
 ```
 
-キャッシュ済みの状態を同期的に取得したい場合は `getSubscriptionStatus()` を使います。
+キャッシュ済みの状態を取得したい場合は `getSubscriptionStatus()` を使う。
 
 ```swift
+guard let subscriptionUseCase else { return }
 let status = await subscriptionUseCase.getSubscriptionStatus()
 ```
 
 ### 5. 購入の復元
 
-別のデバイスや再インストール後に購入を復元します。
+別のデバイスや再インストール後に購入を復元する。
 
 ```swift
 let status = try await subscriptionUseCase.restorePurchases()
@@ -130,7 +133,7 @@ let status = try await subscriptionUseCase.restorePurchases()
 
 ### 6. ユーザー同期
 
-認証済みユーザー ID を RevenueCat と紐付けます。ログイン後に呼び出してください。
+認証済みユーザー ID を RevenueCat と紐付ける。ログイン後に呼び出す。
 
 ```swift
 try await subscriptionUseCase.syncUser(userId: user.id)
