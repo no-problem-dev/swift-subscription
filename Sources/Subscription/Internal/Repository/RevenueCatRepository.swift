@@ -169,34 +169,79 @@ final class RevenueCatRepository: SubscriptionRepository {
     // MARK: - Private Helpers
 
     private func extractSubscriptionStatus(from customerInfo: CustomerInfo) -> SubscriptionStatus {
-        guard let entitlement = customerInfo.entitlements[configuration.entitlementId],
+        let entitlements = customerInfo.entitlements.all.mapValues { entitlement in
+            EntitlementSnapshot(
+                isActive: entitlement.isActive,
+                productIdentifier: entitlement.productIdentifier,
+                expirationDate: entitlement.expirationDate
+            )
+        }
+        return Self.subscriptionStatus(from: entitlements, entitlementId: configuration.entitlementId)
+    }
+
+    private func calculateMonthlyPrice(for package: Package) -> String? {
+        Self.monthlyPriceString(
+            packageType: package.packageType,
+            price: package.storeProduct.price,
+            locale: package.storeProduct.priceFormatter?.locale
+        )
+    }
+
+    private func convertDuration(for packageType: PackageType) -> PackageDuration {
+        Self.packageDuration(for: packageType)
+    }
+
+    // MARK: - Testable Core
+
+    /// `CustomerInfo` のエンタイトルメントから抽出した純粋表現
+    struct EntitlementSnapshot: Sendable, Equatable {
+        let isActive: Bool
+        let productIdentifier: String
+        let expirationDate: Date?
+
+        init(isActive: Bool, productIdentifier: String, expirationDate: Date?) {
+            self.isActive = isActive
+            self.productIdentifier = productIdentifier
+            self.expirationDate = expirationDate
+        }
+    }
+
+    /// エンタイトルメント判定: 指定 ID のエンタイトルメントが有効な場合のみアクティブなステータスを返す
+    static func subscriptionStatus(
+        from entitlements: [String: EntitlementSnapshot],
+        entitlementId: String
+    ) -> SubscriptionStatus {
+        guard let entitlement = entitlements[entitlementId],
               entitlement.isActive else {
             return .inactive
         }
 
         return SubscriptionStatus(
             isActive: true,
-            activeEntitlementId: configuration.entitlementId,
+            activeEntitlementId: entitlementId,
             activePackageId: entitlement.productIdentifier,
             expirationDate: entitlement.expirationDate
         )
     }
 
-    private func calculateMonthlyPrice(for package: Package) -> String? {
-        guard package.packageType == .annual else { return nil }
+    /// 年額パッケージの価格を 12 で割った月額換算の表示文字列を返す。年額以外は `nil`
+    static func monthlyPriceString(
+        packageType: PackageType,
+        price: Decimal,
+        locale: Locale?
+    ) -> String? {
+        guard packageType == .annual else { return nil }
 
-        // 年額を12で割って月額換算
-        let price = package.storeProduct.price
         let monthlyPrice = price / 12
 
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
-        formatter.locale = package.storeProduct.priceFormatter?.locale
+        formatter.locale = locale
 
         return formatter.string(from: monthlyPrice as NSDecimalNumber)
     }
 
-    private func convertDuration(for packageType: PackageType) -> PackageDuration {
+    static func packageDuration(for packageType: PackageType) -> PackageDuration {
         switch packageType {
         case .monthly:
             return .monthly

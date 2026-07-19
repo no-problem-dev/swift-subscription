@@ -22,9 +22,14 @@ public final class SubscriptionUseCaseImpl: SubscriptionUseCase {
     /// バックグラウンドで継続的に監視するタスクを起動する。
     ///
     /// - Parameter configuration: RevenueCat API キーとエンタイトルメント ID を含む設定値。
-    public init(configuration: SubscriptionConfiguration) {
+    public convenience init(configuration: SubscriptionConfiguration) {
+        self.init(repository: RevenueCatRepository(configuration: configuration))
+    }
+
+    /// リポジトリを直接注入する内部イニシャライザ（テスト用の DI seam）。
+    init(repository: SubscriptionRepository) {
         self.state = SubscriptionState()
-        self.repository = RevenueCatRepository(configuration: configuration)
+        self.repository = repository
 
         // サブスクリプション状態の監視を開始
         self.observationTask = Task {
