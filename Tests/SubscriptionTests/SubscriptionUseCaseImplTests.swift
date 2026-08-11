@@ -140,6 +140,80 @@ final class SubscriptionUseCaseImplTests: XCTestCase {
         XCTAssertTrue(reflected, "ストリームに流した状態がキャッシュに反映されること")
     }
 
+    /// An identity swap must not leave the previous identity's entitlement readable.
+    ///
+    /// `syncUser` signs in and then re-reads, precisely so the value cached against the anonymous
+    /// identity is not carried forward. When that re-read fails the re-read is skipped — and so is
+    /// the discarding, so **the cache keeps answering with the entitlement of whoever was signed
+    /// in before.** Someone who bought nothing keeps the access of the account they replaced.
+    func test_同期に失敗しても直前の身元のエンタイトルメントは残らない() async throws {
+        let mock = SubscriptionRepositoryMock()
+        await mock.setStatus(Self.activeStatus)
+        let useCase = SubscriptionUseCaseImpl(repository: mock)
+        _ = try await useCase.checkSubscriptionStatus()
+        let before = await useCase.getSubscriptionStatus()
+        XCTAssertEqual(before, Self.activeStatus)
+
+        // Sign-in lands; the entitlement read that follows it does not.
+        await mock.setCheckStatusError(SubscriptionError.networkError(URLError(.notConnectedToInternet)))
+        do {
+            try await useCase.syncUser(userId: "someone-else")
+            XCTFail("再読み取りが失敗したのだから投げるべき")
+        } catch {
+            // Expected.
+        }
+
+        let cached = await useCase.getSubscriptionStatus()
+        XCTAssertEqual(cached, .inactive, "身元が入れ替わった後に前の身元の権利が読めてはいけない")
+    }
+
+    /// A dashboard with no offering marked current is reported as `nil`, not as a thrown error.
+    ///
+    /// Pins the contract that made a `offeringsNotAvailable` case misleading enough to delete: a
+    /// caller who writes that `catch` believes the "nothing to sell" path is covered, and it never
+    /// runs.
+    func test_現在のオファリングが無いときは投げずにnilを返す() async throws {
+        let useCase = SubscriptionUseCaseImpl(repository: SubscriptionRepositoryMock())
+
+        let returned = try await useCase.loadOfferings()
+
+        XCTAssertNil(returned)
+    }
+
+    // MARK: - Lifetime
+
+    /// The observation task must not keep its own owner alive.
+    ///
+    /// `deinit` is where the task is cancelled, so a task that captures `self` strongly can never
+    /// be cancelled by it: the instance is only released when the task ends, and the task only
+    /// ends when the store's change feed does — which is never. **The documented cancellation
+    /// point cannot be reached**, and the stream is consumed for the rest of the process.
+    func test_解放されたら監視タスクも止まる() async {
+        let mock = SubscriptionRepositoryMock()
+        let box = await Self.makeThenRelease(repository: mock)
+
+        // Give the runtime a turn, so a released instance has actually been torn down.
+        for _ in 0..<10 { await Task.yield() }
+
+        XCTAssertNil(box.value, "監視タスクが self を掴んだままなので deinit が走らない")
+    }
+
+    /// Holds the instance weakly, and returns after the only strong reference has gone out of
+    /// scope. Taking the release across a function boundary keeps ARC from extending the lifetime
+    /// to the end of the test.
+    private final class WeakBox: @unchecked Sendable {
+        weak var value: SubscriptionUseCaseImpl?
+    }
+
+    private static func makeThenRelease(repository: SubscriptionRepositoryMock) async -> WeakBox {
+        let box = WeakBox()
+        let useCase = SubscriptionUseCaseImpl(repository: repository)
+        box.value = useCase
+        // Let the observation task reach its suspension point on the change feed.
+        _ = await useCase.getSubscriptionStatus()
+        return box
+    }
+
     // MARK: - Private
 
     private static func waitUntil(

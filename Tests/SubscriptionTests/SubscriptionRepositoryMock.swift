@@ -7,6 +7,9 @@ actor SubscriptionRepositoryMock: SubscriptionRepository {
     private var statusToReturn: SubscriptionStatus = .inactive
     private var offeringToReturn: SubscriptionOffering?
     private var errorToThrow: Error?
+    /// Fails only the entitlement read, so a test can let an identity swap succeed and the
+    /// refresh that follows it fail — the split the store makes when the network drops mid-way.
+    private var checkStatusError: Error?
     private(set) var syncedUserIds: [String] = []
     private(set) var clearUserCallCount = 0
 
@@ -32,9 +35,16 @@ actor SubscriptionRepositoryMock: SubscriptionRepository {
         errorToThrow = error
     }
 
+    func setCheckStatusError(_ error: Error?) {
+        checkStatusError = error
+    }
+
     // MARK: - SubscriptionRepository
 
     func checkSubscriptionStatus() async throws -> SubscriptionStatus {
+        if let checkStatusError {
+            throw checkStatusError
+        }
         try throwIfNeeded()
         return statusToReturn
     }

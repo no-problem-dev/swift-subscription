@@ -11,7 +11,7 @@ import Foundation
 public final class SubscriptionUseCaseImpl: SubscriptionUseCase {
     private let state: SubscriptionState
     private let repository: SubscriptionRepository
-    nonisolated(unsafe) private var observationTask: Task<Void, Never>?
+    private let observationTask: Task<Void, Never>
 
     /// Configures the RevenueCat SDK and begins tracking entitlement changes.
     ///
@@ -28,16 +28,23 @@ public final class SubscriptionUseCaseImpl: SubscriptionUseCase {
 
     /// Injects a repository directly. This is the seam that lets tests run without the SDK.
     init(repository: SubscriptionRepository) {
-        self.state = SubscriptionState()
+        let state = SubscriptionState()
+        self.state = state
         self.repository = repository
 
+        // **The task captures the state and the repository, never `self`.** The store's change
+        // feed never finishes, so a task holding `self` would keep this instance alive for the
+        // rest of the process and `deinit` — the only place the task is cancelled — would never
+        // run.
         self.observationTask = Task {
-            await self.startObservingSubscriptionChanges()
+            for await status in repository.observeSubscriptionChanges() {
+                await state.setStatus(status)
+            }
         }
     }
 
     deinit {
-        observationTask?.cancel()
+        observationTask.cancel()
     }
 
     // MARK: - SubscriptionUseCase
@@ -57,9 +64,7 @@ public final class SubscriptionUseCaseImpl: SubscriptionUseCase {
     }
 
     public func loadOfferings() async throws -> SubscriptionOffering? {
-        let offering = try await repository.loadOfferings()
-        await state.setOfferings(offering)
-        return offering
+        try await repository.loadOfferings()
     }
 
     public func purchase(packageId: String) async throws -> SubscriptionStatus {
@@ -78,9 +83,13 @@ public final class SubscriptionUseCaseImpl: SubscriptionUseCase {
         try await repository.syncUser(userId: userId)
 
         // Signing in swaps identities, so the entitlement read before the swap belongs to the
-        // previous identity. Re-read it here rather than carrying the stale value forward.
-        let status = try await repository.checkSubscriptionStatus()
+        // previous identity. **Discard it the moment the swap lands, not once the re-read
+        // succeeds** — a re-read that throws would otherwise leave the previous account's
+        // entitlement readable under the new identity.
         await state.setUserId(userId)
+        await state.setStatus(.inactive)
+
+        let status = try await repository.checkSubscriptionStatus()
         await state.setStatus(status)
     }
 
@@ -90,11 +99,4 @@ public final class SubscriptionUseCaseImpl: SubscriptionUseCase {
         await state.setStatus(.inactive)
     }
 
-    // MARK: - Private
-
-    private func startObservingSubscriptionChanges() async {
-        for await status in repository.observeSubscriptionChanges() {
-            await state.setStatus(status)
-        }
-    }
 }

@@ -20,13 +20,9 @@ final class RevenueCatRepository: SubscriptionRepository {
     // MARK: - Configuration
 
     private static func configureRevenueCat(apiKey: String) -> Bool {
-        guard !apiKey.isEmpty else {
-            print("⚠️ RevenueCat API Key is empty")
-            return false
-        }
+        guard !apiKey.isEmpty else { return false }
 
         Purchases.configure(withAPIKey: apiKey)
-        print("✅ RevenueCat configured")
         return true
     }
 
@@ -91,11 +87,7 @@ final class RevenueCatRepository: SubscriptionRepository {
                 throw SubscriptionError.purchaseCancelled
             }
 
-            let status = extractSubscriptionStatus(from: customerInfo)
-            if status.isActive {
-                print("✅ Purchase successful")
-            }
-            return status
+            return extractSubscriptionStatus(from: customerInfo)
         } catch let error as SubscriptionError {
             throw error
         } catch {
@@ -110,9 +102,7 @@ final class RevenueCatRepository: SubscriptionRepository {
 
         do {
             let customerInfo = try await Purchases.shared.restorePurchases()
-            let status = extractSubscriptionStatus(from: customerInfo)
-            print("✅ Restore completed: \(status.isActive ? "Active subscription found" : "No active subscription")")
-            return status
+            return extractSubscriptionStatus(from: customerInfo)
         } catch {
             throw SubscriptionError.restoreFailed(error)
         }
@@ -124,16 +114,13 @@ final class RevenueCatRepository: SubscriptionRepository {
         }
 
         do {
-            let (customerInfo, _) = try await Purchases.shared.logIn(userId)
+            _ = try await Purchases.shared.logIn(userId)
 
             // Runs after login on purpose: attributes set before the identity swap would be
             // written against the anonymous identity and lost.
             if let setter = configuration.customAttributesSetter {
                 await setter(userId)
             }
-
-            let status = extractSubscriptionStatus(from: customerInfo)
-            print("✅ RevenueCat logged in: \(status.isActive ? "Active subscription" : "No subscription")")
         } catch {
             throw SubscriptionError.userSyncFailed(error)
         }
@@ -146,7 +133,6 @@ final class RevenueCatRepository: SubscriptionRepository {
 
         do {
             _ = try await Purchases.shared.logOut()
-            print("✅ RevenueCat logged out")
         } catch {
             throw SubscriptionError.userSyncFailed(error)
         }
@@ -161,9 +147,7 @@ final class RevenueCatRepository: SubscriptionRepository {
 
             let task = Task {
                 for await customerInfo in Purchases.shared.customerInfoStream {
-                    let status = extractSubscriptionStatus(from: customerInfo)
-                    print("📱 Subscription status updated: \(status.isActive ? "Active" : "Inactive")")
-                    continuation.yield(status)
+                    continuation.yield(extractSubscriptionStatus(from: customerInfo))
                 }
             }
 

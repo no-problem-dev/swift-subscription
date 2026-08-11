@@ -24,8 +24,7 @@ let package = Package(
         .target(
             name: "Subscription",
             dependencies: [
-                .product(name: "RevenueCat", package: "purchases-ios"),
-                .product(name: "RevenueCatUI", package: "purchases-ios")
+                .product(name: "RevenueCat", package: "purchases-ios")
             ],
             path: "Sources/Subscription"
         ),

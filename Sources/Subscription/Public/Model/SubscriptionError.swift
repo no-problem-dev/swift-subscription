@@ -23,9 +23,6 @@ public enum SubscriptionError: Error, LocalizedError {
     /// is raised by every operation until the key is supplied.
     case notConfigured
 
-    /// The configuration was rejected. Never raised by this package.
-    case invalidConfiguration(String)
-
     /// The store could not be reached while reading the entitlement or the products.
     ///
     /// Worth a retry. Access already granted should be left alone, since being offline is
@@ -47,10 +44,6 @@ public enum SubscriptionError: Error, LocalizedError {
     /// rather than throwing.
     case restoreFailed(Error)
 
-    /// No products were available. Never raised by this package; a missing offering is
-    /// reported as `nil` from ``SubscriptionUseCase/loadOfferings()`` instead.
-    case offeringsNotAvailable
-
     /// No package in the current offering has the requested identifier.
     ///
     /// Usually an App Store product identifier passed where the offering's package
@@ -62,9 +55,6 @@ public enum SubscriptionError: Error, LocalizedError {
     /// the previous identity.
     case userSyncFailed(Error)
 
-    /// An unclassified failure. Never raised by this package.
-    case unknown(Error)
-
     /// The message shown by `localizedDescription`.
     ///
     /// - Warning: These messages are hard-coded English and are not localized, so they
@@ -74,8 +64,6 @@ public enum SubscriptionError: Error, LocalizedError {
         switch self {
         case .notConfigured:
             return "The subscription service is not configured."
-        case .invalidConfiguration(let message):
-            return "Configuration error: \(message)"
         case .networkError(let error):
             return "Network error: \(error.localizedDescription)"
         case .purchaseCancelled:
@@ -84,14 +72,10 @@ public enum SubscriptionError: Error, LocalizedError {
             return "The purchase failed: \(error.localizedDescription)"
         case .restoreFailed(let error):
             return "Restoring purchases failed: \(error.localizedDescription)"
-        case .offeringsNotAvailable:
-            return "The product information could not be loaded."
         case .packageNotFound(let id):
             return "No package was found with the identifier \(id)."
         case .userSyncFailed(let error):
             return "Syncing the user failed: \(error.localizedDescription)"
-        case .unknown(let error):
-            return "An error occurred: \(error.localizedDescription)"
         }
     }
 }

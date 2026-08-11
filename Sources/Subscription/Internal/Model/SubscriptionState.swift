@@ -7,7 +7,6 @@ import Foundation
 /// an entitlement, so a status stays `isActive` until a refresh replaces it.
 actor SubscriptionState {
     private(set) var status: SubscriptionStatus = .inactive
-    private(set) var offerings: SubscriptionOffering?
     private(set) var userId: String?
 
     init() {}
@@ -16,10 +15,6 @@ actor SubscriptionState {
 
     func setStatus(_ status: SubscriptionStatus) {
         self.status = status
-    }
-
-    func setOfferings(_ offerings: SubscriptionOffering?) {
-        self.offerings = offerings
     }
 
     func setUserId(_ userId: String?) {

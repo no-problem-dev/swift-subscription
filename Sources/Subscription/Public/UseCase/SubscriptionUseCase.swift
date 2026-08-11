@@ -82,8 +82,14 @@ public protocol SubscriptionUseCase: Sendable {
     /// to an anonymous identity, so an entitlement bought before sign-in does not follow the
     /// account to another device.
     ///
+    /// The cached status is cleared to `.inactive` as soon as the identity swaps, and refilled by
+    /// the refresh that follows. A throwing call therefore leaves the cache reading `.inactive`
+    /// rather than the previous account's entitlement — "not known yet" for the new identity, not
+    /// a grant inherited from the old one.
+    ///
     /// - Parameter userId: The app's stable identifier for the signed-in account.
-    /// - Throws: ``SubscriptionError/userSyncFailed(_:)`` if sign-in is rejected.
+    /// - Throws: ``SubscriptionError/userSyncFailed(_:)`` if sign-in is rejected, or
+    ///   ``SubscriptionError/networkError(_:)`` if the refresh after sign-in cannot reach the store.
     func syncUser(userId: String) async throws
 
     /// Returns to an anonymous identity and resets the cached status to `.inactive`.
