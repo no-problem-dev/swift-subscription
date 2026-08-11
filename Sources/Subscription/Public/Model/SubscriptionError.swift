@@ -67,31 +67,31 @@ public enum SubscriptionError: Error, LocalizedError {
 
     /// The message shown by `localizedDescription`.
     ///
-    /// - Warning: These messages are hard-coded Japanese and are not localized, so they
-    ///   reach the customer in Japanese whatever the device language. Map the case to your
+    /// - Warning: These messages are hard-coded English and are not localized, so they
+    ///   reach the customer in English whatever the device language. Map the case to your
     ///   own copy rather than displaying this directly.
     public var errorDescription: String? {
         switch self {
         case .notConfigured:
-            return "サブスクリプションが初期化されていません"
+            return "The subscription service is not configured."
         case .invalidConfiguration(let message):
-            return "設定エラー: \(message)"
+            return "Configuration error: \(message)"
         case .networkError(let error):
-            return "ネットワークエラー: \(error.localizedDescription)"
+            return "Network error: \(error.localizedDescription)"
         case .purchaseCancelled:
-            return "購入がキャンセルされました"
+            return "The purchase was cancelled."
         case .purchaseFailed(let error):
-            return "購入に失敗しました: \(error.localizedDescription)"
+            return "The purchase failed: \(error.localizedDescription)"
         case .restoreFailed(let error):
-            return "復元に失敗しました: \(error.localizedDescription)"
+            return "Restoring purchases failed: \(error.localizedDescription)"
         case .offeringsNotAvailable:
-            return "商品情報を取得できませんでした"
+            return "The product information could not be loaded."
         case .packageNotFound(let id):
-            return "商品が見つかりません: \(id)"
+            return "No package was found with the identifier \(id)."
         case .userSyncFailed(let error):
-            return "ユーザー同期に失敗しました: \(error.localizedDescription)"
+            return "Syncing the user failed: \(error.localizedDescription)"
         case .unknown(let error):
-            return "エラーが発生しました: \(error.localizedDescription)"
+            return "An error occurred: \(error.localizedDescription)"
         }
     }
 }

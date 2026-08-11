@@ -2,19 +2,19 @@ import Foundation
 
 /// How long one purchase lasts.
 ///
-/// - Warning: The raw values are hard-coded Japanese display strings, as the declarations
-///   below show. Rendering `rawValue` puts Japanese on the paywall regardless of the device
-///   language. Switch over the case and supply your own localized label.
+/// The raw values are stable identifiers meant for logging and analytics, not labels.
+/// Switch over the case to build a label your app owns and localizes — a paywall is the
+/// last place a package should be choosing wording on your behalf.
 public enum PackageDuration: String, Sendable {
-    case monthly = "月額"
-    case annual = "年額"
-    case lifetime = "買い切り"
+    case monthly
+    case annual
+    case lifetime
 
     /// A period this package does not model, such as weekly or a custom store duration.
     ///
     /// Reachable for products that are perfectly valid in the store, so treat it as a
-    /// product to present rather than an error. Its raw value is the empty string.
-    case unknown = ""
+    /// product to present rather than an error.
+    case unknown
 }
 
 /// One purchasable product, with its price already formatted for display.

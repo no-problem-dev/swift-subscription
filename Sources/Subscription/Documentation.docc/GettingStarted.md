@@ -99,8 +99,8 @@ for package in offering?.packages ?? [] {
 `price` and `pricePerMonth` arrive formatted for the customer's storefront. Do not reformat
 them or assume a currency symbol.
 
-> Warning: ``PackageDuration`` raw values are hard-coded Japanese strings. Switch over the
-> case and supply your own localized label instead of rendering `rawValue`.
+``PackageDuration`` raw values are stable identifiers for logging, not labels. Switch over the
+case to build a label your app owns and localizes.
 
 ## Purchase and restore
 
