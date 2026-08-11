@@ -1,42 +1,42 @@
 import Foundation
 
-/// ユーザーのサブスクリプション状態を表す。
+/// Whether the customer is entitled right now, and what backs that entitlement.
 ///
-/// ユーザーが現在どのサブスクリプションプランに加入しているかの情報を保持する。
-///
-/// ## 使用例
-/// ```swift
-/// let status = try await subscriptionUseCase.checkSubscriptionStatus()
-///
-/// if status.isActive {
-///     print("加入中のプラン: \(status.activePackageId ?? "不明")")
-///     if let expiration = status.expirationDate {
-///         print("有効期限: \(expiration)")
-///     }
-/// } else {
-///     print("未加入")
-/// }
-/// ```
+/// A value is a reading taken at one moment, not a live view. Nothing in it expires on its
+/// own, so a value held across a subscription lapse keeps reporting `isActive`. Re-read it
+/// from ``SubscriptionUseCase/observeSubscriptionStatus()`` or a refresh instead of storing
+/// one and trusting it later.
 public struct SubscriptionStatus: Sendable, Equatable {
-    /// 有効なサブスクリプションに加入しているかどうか
+    /// Whether paid features should be unlocked.
+    ///
+    /// This is the only field to branch on for access. The others describe the entitlement
+    /// and are `nil` whenever this is `false`.
     public let isActive: Bool
 
-    /// 有効なエンタイトルメントID（加入していない場合は `nil`）
+    /// The entitlement that granted access, matching the identifier given at configuration.
     public let activeEntitlementId: String?
 
-    /// 加入中のプランのパッケージID（月額/年額/買い切りなどを識別、加入していない場合は `nil`）
+    /// The store product backing the entitlement, which is how to tell a monthly subscriber
+    /// from an annual or lifetime one.
     public let activePackageId: String?
 
-    /// サブスクリプションの有効期限（買い切りプランや加入していない場合は `nil`）
+    /// When access lapses without a renewal.
+    ///
+    /// `nil` for a lifetime purchase as well as for no subscription, so it does not
+    /// distinguish the two — check `isActive` first. A date in the past can still appear
+    /// alongside `isActive == true` during the store's grace period for a failed payment.
     public let expirationDate: Date?
 
-    /// `SubscriptionStatus` を生成する。
+    /// Creates a status.
+    ///
+    /// Provided for tests and previews. Values that describe a real customer come from the
+    /// use case; one constructed here is a fixture and grants nothing on its own.
     ///
     /// - Parameters:
-    ///   - isActive: 有効なサブスクリプションに加入しているかどうか。
-    ///   - activeEntitlementId: 有効なエンタイトルメント ID。加入していない場合は `nil`。
-    ///   - activePackageId: 加入中のプランのパッケージ ID。加入していない場合は `nil`。
-    ///   - expirationDate: サブスクリプションの有効期限。買い切りプランや加入していない場合は `nil`。
+    ///   - isActive: Whether paid features should be unlocked.
+    ///   - activeEntitlementId: The entitlement that granted access.
+    ///   - activePackageId: The store product backing the entitlement.
+    ///   - expirationDate: When access lapses; `nil` for a lifetime purchase.
     public init(
         isActive: Bool,
         activeEntitlementId: String? = nil,
@@ -49,7 +49,7 @@ public struct SubscriptionStatus: Sendable, Equatable {
         self.expirationDate = expirationDate
     }
 
-    /// サブスクリプションが非アクティブ状態を表す定数
+    /// The not-entitled reading, and the value the cache holds before the first refresh.
     public static let inactive = SubscriptionStatus(
         isActive: false,
         activeEntitlementId: nil,

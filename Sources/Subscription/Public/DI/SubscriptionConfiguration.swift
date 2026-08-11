@@ -1,38 +1,43 @@
 import Foundation
 
-/// サブスクリプション機能の初期化に必要な設定情報
+/// The settings ``SubscriptionUseCaseImpl`` needs before it can talk to the store.
 ///
-/// ## 使用例
+/// ## Example
 /// ```swift
 /// let config = SubscriptionConfiguration(
 ///     apiKey: "your_revenuecat_api_key",
 ///     entitlementId: "premium"
 /// )
-/// let subscriptionUseCase = SubscriptionUseCaseImpl(configuration: config)
 /// ```
 public struct SubscriptionConfiguration: Sendable {
-    /// RevenueCat API キー
+    /// The RevenueCat public SDK key for this platform.
     ///
-    /// RevenueCat ダッシュボードから取得した API キーを設定する。
+    /// Use the platform's public key, not a secret key: this value ships inside the app and
+    /// is readable by anyone who inspects the binary. An empty string is accepted here and
+    /// surfaces later as ``SubscriptionError/notConfigured`` from every store call.
     public let apiKey: String
 
-    /// プレミアム機能を識別するエンタイトルメント ID
+    /// The entitlement whose active state means "subscribed".
     ///
-    /// RevenueCat で設定したエンタイトルメント名。
-    /// デフォルト値は `"premium"`。
+    /// Must match the entitlement identifier in the RevenueCat dashboard exactly. A typo does
+    /// not fail loudly; it makes every paying customer look unsubscribed, because no
+    /// entitlement by that name is ever active.
     public let entitlementId: String
 
-    /// ユーザー同期時に追加のカスタム属性を設定するためのコールバック（オプション）
+    /// A hook to attach your own attributes to the billing profile after sign-in.
     ///
-    /// ユーザー ID とともに追加の属性を RevenueCat に送信したい場合に設定する。
+    /// Runs on every ``SubscriptionUseCase/syncUser(userId:)`` after the identity swap
+    /// succeeds, and sign-in waits on it. Keep it short, and do not put anything the store
+    /// should not hold into it.
     public let customAttributesSetter: (@Sendable (String) async -> Void)?
 
-    /// `SubscriptionConfiguration` を生成する。
+    /// Creates a configuration.
     ///
     /// - Parameters:
-    ///   - apiKey: RevenueCat ダッシュボードから取得した API キー。
-    ///   - entitlementId: プレミアム機能に対応するエンタイトルメント ID。省略時は `"premium"`。
-    ///   - customAttributesSetter: ユーザー同期時に追加属性を RevenueCat へ送信するコールバック。不要な場合は `nil`。
+    ///   - apiKey: The RevenueCat public SDK key for this platform.
+    ///   - entitlementId: The entitlement that counts as subscribed. Defaults to `"premium"`,
+    ///     which is only correct if the dashboard uses that exact name.
+    ///   - customAttributesSetter: An optional hook run after sign-in.
     public init(
         apiKey: String,
         entitlementId: String = "premium",

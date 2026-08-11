@@ -1,6 +1,10 @@
 import Foundation
 
-/// サブスクリプション状態（内部専用）
+/// The cached view of the customer's entitlement, shared by every caller of the use case.
+///
+/// An actor because the store's change feed and app code both write here. The values are a
+/// cache of the last answer received, never a source of truth: nothing in this type expires
+/// an entitlement, so a status stays `isActive` until a refresh replaces it.
 actor SubscriptionState {
     private(set) var status: SubscriptionStatus = .inactive
     private(set) var offerings: SubscriptionOffering?

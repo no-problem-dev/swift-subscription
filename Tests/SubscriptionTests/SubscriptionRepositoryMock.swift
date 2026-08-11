@@ -1,7 +1,8 @@
 import Foundation
 @testable import Subscription
 
-/// RevenueCat SDK を叩かずに UseCase を検証するためのモックリポジトリ
+/// A repository that answers from values the test sets, so the use case can be exercised
+/// without the RevenueCat SDK or a StoreKit session.
 actor SubscriptionRepositoryMock: SubscriptionRepository {
     private var statusToReturn: SubscriptionStatus = .inactive
     private var offeringToReturn: SubscriptionOffering?
@@ -9,7 +10,7 @@ actor SubscriptionRepositoryMock: SubscriptionRepository {
     private(set) var syncedUserIds: [String] = []
     private(set) var clearUserCallCount = 0
 
-    /// `observeSubscriptionChanges()` が返すストリームに値を流し込むための継続
+    /// Pushes a status into the stream, standing in for a change the store would push.
     nonisolated let changesContinuation: AsyncStream<SubscriptionStatus>.Continuation
     private nonisolated let changes: AsyncStream<SubscriptionStatus>
 

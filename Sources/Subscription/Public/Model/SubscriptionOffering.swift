@@ -1,48 +1,65 @@
 import Foundation
 
-/// サブスクリプションプランの課金期間
+/// How long one purchase lasts.
+///
+/// - Warning: The raw values are hard-coded Japanese display strings, as the declarations
+///   below show. Rendering `rawValue` puts Japanese on the paywall regardless of the device
+///   language. Switch over the case and supply your own localized label.
 public enum PackageDuration: String, Sendable {
-    /// 月額プラン
     case monthly = "月額"
-    /// 年額プラン
     case annual = "年額"
-    /// 買い切りプラン
     case lifetime = "買い切り"
-    /// 不明なプラン
+
+    /// A period this package does not model, such as weekly or a custom store duration.
+    ///
+    /// Reachable for products that are perfectly valid in the store, so treat it as a
+    /// product to present rather than an error. Its raw value is the empty string.
     case unknown = ""
 }
 
-/// 購入可能なサブスクリプションプランの情報
+/// One purchasable product, with its price already formatted for display.
 ///
-/// App Store / Google Play Storeで設定されたプランの詳細情報を保持する。
+/// Every string here arrives localized and currency-formatted by the store for the
+/// customer's storefront. Do not reformat them or assume a currency: the same product is
+/// "¥6,000" for one customer and "$39.99" for another.
 public struct SubscriptionPackage: Sendable, Identifiable {
-    /// プランを一意に識別するID
+    /// The identifier to pass to ``SubscriptionUseCase/purchase(packageId:)``.
+    ///
+    /// This is the package's identifier within the offering, not the App Store product
+    /// identifier.
     public let id: String
 
-    /// プランの表示名（例: "年間プラン"）
+    /// The product's display name as configured in the store.
     public let title: String
 
-    /// プランの説明文
+    /// The product's store description, which is often empty in practice because the field
+    /// is optional in App Store Connect.
     public let description: String
 
-    /// 価格の表示文字列（例: "¥6,000"）
+    /// The price, already formatted in the customer's currency.
     public let price: String
 
-    /// 月額換算の価格表示文字列（年額プランの場合のみ、例: "¥500/月"）
+    /// The monthly equivalent of an annual price, for a "works out at ¥500/month" line.
+    ///
+    /// `nil` for every package except an annual one. It is a derived figure and is never the
+    /// amount charged.
     public let pricePerMonth: String?
 
-    /// プランの課金期間
+    /// How long the purchase lasts.
     public let duration: PackageDuration
 
-    /// `SubscriptionPackage` を生成する。
+    /// Creates a package.
+    ///
+    /// Provided for tests, previews, and paywall mock-ups; real values come from
+    /// ``SubscriptionUseCase/loadOfferings()``. An `id` invented here cannot be purchased.
     ///
     /// - Parameters:
-    ///   - id: プランを一意に識別する ID。
-    ///   - title: プランの表示名。
-    ///   - description: プランの説明文。
-    ///   - price: 価格の表示文字列（例: `"¥6,000"`）。
-    ///   - pricePerMonth: 月額換算の価格表示文字列。年額プランのみ設定し、それ以外は `nil`。
-    ///   - duration: プランの課金期間。
+    ///   - id: The package identifier within its offering.
+    ///   - title: The display name.
+    ///   - description: The store description.
+    ///   - price: The price, pre-formatted for the customer's storefront.
+    ///   - pricePerMonth: The monthly equivalent for annual packages; `nil` otherwise.
+    ///   - duration: How long the purchase lasts.
     public init(
         id: String,
         title: String,
@@ -60,32 +77,30 @@ public struct SubscriptionPackage: Sendable, Identifiable {
     }
 }
 
-/// 購入可能なサブスクリプションプランのグループ
+/// The set of products a paywall should show, as chosen in the RevenueCat dashboard.
 ///
-/// RevenueCatで設定したオファリング（プランのグループ）を表します。
-/// 通常、月額・年額・買い切りなど複数のプランが含まれます。
-///
-/// ## 使用例
-/// ```swift
-/// let offerings = try await subscriptionUseCase.loadOfferings()
-/// if let packages = offerings?.packages {
-///     for package in packages {
-///         print("\(package.title): \(package.price)")
-///     }
-/// }
-/// ```
+/// Which offering is current is a server-side decision, so the products can change without
+/// an app release. Build the paywall from whatever `packages` contains rather than assuming
+/// a fixed monthly-and-annual pair.
 public struct SubscriptionOffering: Sendable, Identifiable {
-    /// オファリングを一意に識別するID
+    /// The offering's dashboard identifier, useful for attributing conversions to a paywall
+    /// experiment.
     public let id: String
 
-    /// 購入可能なプランの配列
+    /// The products to display, in the order the dashboard lists them.
+    ///
+    /// Can be empty if the offering has no products attached, which leaves a paywall with
+    /// nothing to sell.
     public let packages: [SubscriptionPackage]
 
-    /// `SubscriptionOffering` を生成する。
+    /// Creates an offering.
+    ///
+    /// Provided for tests and previews; real values come from
+    /// ``SubscriptionUseCase/loadOfferings()``.
     ///
     /// - Parameters:
-    ///   - id: オファリングを一意に識別する ID。
-    ///   - packages: 購入可能なプランの配列。
+    ///   - id: The offering's dashboard identifier.
+    ///   - packages: The products to display.
     public init(id: String, packages: [SubscriptionPackage]) {
         self.id = id
         self.packages = packages

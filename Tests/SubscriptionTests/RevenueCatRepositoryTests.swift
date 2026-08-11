@@ -2,10 +2,10 @@ import RevenueCat
 import XCTest
 @testable import Subscription
 
-/// `RevenueCatRepository` のテスト可能コア（エンタイトルメント判定・価格換算・期間変換）の検証。
-/// 実 RevenueCat SDK には接続しない。
+/// Covers the pure core of `RevenueCatRepository`: the entitlement decision, the monthly
+/// price conversion, and the package-type mapping. Never contacts the RevenueCat SDK.
 final class RevenueCatRepositoryTests: XCTestCase {
-    // MARK: - エンタイトルメント判定
+    // MARK: - Entitlement decision
 
     func test_有効なエンタイトルメントがあればアクティブなステータスを返す() {
         let expiration = Date(timeIntervalSince1970: 1_900_000_000)
@@ -80,7 +80,7 @@ final class RevenueCatRepositoryTests: XCTestCase {
         XCTAssertNil(status.expirationDate)
     }
 
-    // MARK: - 年額→月額換算
+    // MARK: - Annual to monthly conversion
 
     func test_年額パッケージは12分の1の月額換算文字列を返す() {
         let result = RevenueCatRepository.monthlyPriceString(
@@ -122,7 +122,7 @@ final class RevenueCatRepositoryTests: XCTestCase {
         XCTAssertNil(RevenueCatRepository.monthlyPriceString(packageType: .weekly, price: 2, locale: locale))
     }
 
-    // MARK: - 期間変換
+    // MARK: - Package duration mapping
 
     func test_パッケージ種別を課金期間に変換する() {
         XCTAssertEqual(RevenueCatRepository.packageDuration(for: .monthly), .monthly)

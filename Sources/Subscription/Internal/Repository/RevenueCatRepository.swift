@@ -1,7 +1,13 @@
 import Foundation
 import RevenueCat
 
-/// RevenueCatを使用したサブスクリプションリポジトリの実装
+/// Maps the RevenueCat SDK onto ``SubscriptionRepository``.
+///
+/// The SDK is configured once, from init, against a process-global `Purchases.shared`.
+/// Nothing below this line can be exercised on a simulator launched by `simctl`: a
+/// `.storekit` configuration file is only applied by an Xcode IDE Run, and a `simctl`
+/// launch falls through to the real App Store sandbox instead. The pure functions under
+/// "Testable Core" exist because of that — they are the part that can be tested at all.
 final class RevenueCatRepository: SubscriptionRepository {
     private let configuration: SubscriptionConfiguration
     private let isConfigured: Bool
@@ -120,7 +126,8 @@ final class RevenueCatRepository: SubscriptionRepository {
         do {
             let (customerInfo, _) = try await Purchases.shared.logIn(userId)
 
-            // カスタム属性設定のコールバックがあれば実行
+            // Runs after login on purpose: attributes set before the identity swap would be
+            // written against the anonymous identity and lost.
             if let setter = configuration.customAttributesSetter {
                 await setter(userId)
             }
@@ -193,7 +200,10 @@ final class RevenueCatRepository: SubscriptionRepository {
 
     // MARK: - Testable Core
 
-    /// `CustomerInfo` のエンタイトルメントから抽出した純粋表現
+    /// The fields of a RevenueCat entitlement this package actually reads.
+    ///
+    /// `CustomerInfo` cannot be constructed in a test, so the entitlement decision is taken
+    /// against this instead.
     struct EntitlementSnapshot: Sendable, Equatable {
         let isActive: Bool
         let productIdentifier: String
@@ -206,7 +216,12 @@ final class RevenueCatRepository: SubscriptionRepository {
         }
     }
 
-    /// エンタイトルメント判定: 指定 ID のエンタイトルメントが有効な場合のみアクティブなステータスを返す
+    /// Decides whether the customer is entitled, from a snapshot of all their entitlements.
+    ///
+    /// Fails closed in every ambiguous case: an unknown identifier, an expired entitlement, or
+    /// a different entitlement being active all resolve to `.inactive`. Only the entitlement
+    /// named by `entitlementId` can grant access, so a customer subscribed to some other
+    /// product of the same app is not entitled here.
     static func subscriptionStatus(
         from entitlements: [String: EntitlementSnapshot],
         entitlementId: String
@@ -224,7 +239,11 @@ final class RevenueCatRepository: SubscriptionRepository {
         )
     }
 
-    /// 年額パッケージの価格を 12 で割った月額換算の表示文字列を返す。年額以外は `nil`
+    /// Formats an annual price as its per-month equivalent, for the "only ¥500/month" line.
+    ///
+    /// Returns `nil` for anything but an annual package, since a monthly equivalent of a
+    /// monthly price is just the price. The result is a derived marketing figure, not an
+    /// amount anyone is charged, and it is rounded by the currency's own formatter.
     static func monthlyPriceString(
         packageType: PackageType,
         price: Decimal,

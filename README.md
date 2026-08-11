@@ -1,6 +1,6 @@
 # Subscription
 
-A Swift package for subscription management using RevenueCat.
+Subscriptions and in-app purchases through RevenueCat, behind a small async API.
 
 ![Swift](https://img.shields.io/badge/Swift-6.0-orange.svg)
 ![Platforms](https://img.shields.io/badge/Platforms-iOS%2017.0%2B%20%7C%20macOS%2014.0%2B-blue.svg)
@@ -9,50 +9,51 @@ A Swift package for subscription management using RevenueCat.
 
 English | [日本語](./README.ja.md)
 
-📚 **[Full Documentation](https://no-problem-dev.github.io/swift-subscription/documentation/subscription/)**
-
 ## Overview
 
-The `Subscription` package integrates with RevenueCat to provide a high-level API for implementing in-app purchases and subscriptions.
+An app talks to one protocol, `SubscriptionUseCase`, instead of the store's own types. It
+covers what a paywall needs: read the entitlement, list the products, buy one, and keep the
+answer current as renewals and expiries arrive.
 
-### Features
+- Cached and authoritative entitlement reads, kept deliberately separate
+- Purchase, restore, and sign-in flows
+- An `AsyncStream` of entitlement changes, including ones the app did not cause
+- Sendable throughout, with an actor holding the cached state
 
-- ✅ Check and observe subscription status
-- ✅ Fetch available plans
-- ✅ Purchase and restore plans
-- ✅ User authentication integration
-- ✅ SwiftUI-ready (async/await, AsyncStream)
-- ✅ Actor-based thread-safe design
+## Usage
+
+```swift
+import Subscription
+
+let useCase = SubscriptionUseCaseImpl(
+    configuration: SubscriptionConfiguration(apiKey: apiKey, entitlementId: "premium")
+)
+
+if try await useCase.checkSubscriptionStatus().isActive {
+    unlockPremium()
+}
+```
+
+`checkSubscriptionStatus()` asks the store and is the read to trust when it decides whether
+someone keeps access. `getSubscriptionStatus()` is the instant, cached counterpart — it
+starts out inactive, so early in a launch that answer means "not known yet".
+
+## Documentation
+
+**[API documentation and Getting Started](https://no-problem-dev.github.io/swift-subscription/documentation/subscription/)**
+
+The Getting Started guide covers the App Store Connect and RevenueCat dashboard setup that
+has to be in place first, building a paywall, and what cannot be tested on a simulator.
 
 ## Requirements
 
-- **iOS** 17.0+ / **macOS** 14.0+
-- **Swift** 6.0+
-- **RevenueCat SDK** 5.14.0+
-
-## Prerequisites
-
-### RevenueCat Project Setup
-
-Complete the following steps in the [RevenueCat Dashboard](https://app.revenuecat.com/):
-
-1. **Create a project**
-   - Create a new project and obtain your API key
-
-2. **Configure products**
-   - Create subscription products in App Store Connect / Google Play Console
-   - Import products into the RevenueCat Dashboard
-   - Configure entitlements (e.g., "premium")
-
-3. **Create an offering**
-   - Group plans (monthly, annual, etc.) into an offering
-   - Set the default offering
+- iOS 17.0+ / macOS 14.0+
+- Swift 6.0+
+- [RevenueCat SDK](https://github.com/RevenueCat/purchases-ios) 5.14.0+
 
 ## Installation
 
-### Swift Package Manager
-
-Add the following to your `Package.swift`:
+Add the package to your `Package.swift`:
 
 ```swift
 dependencies: [
@@ -60,162 +61,9 @@ dependencies: [
 ]
 ```
 
-Or add it via `File > Add Package Dependencies...` in Xcode using `https://github.com/no-problem-dev/swift-subscription`.
-
-## Quick Start
-
-### 1. Initialize
-
-```swift
-import Subscription
-
-let config = SubscriptionConfiguration(
-    apiKey: "your_revenuecat_api_key",
-    entitlementId: "premium"
-)
-let subscriptionUseCase = SubscriptionUseCaseImpl(configuration: config)
-```
-
-### 2. Check Subscription Status
-
-```swift
-// Get cached status immediately
-let status = await subscriptionUseCase.getSubscriptionStatus()
-
-// Fetch the latest status from the server
-let latestStatus = try await subscriptionUseCase.checkSubscriptionStatus()
-
-if latestStatus.isActive {
-    print("Active plan: \(latestStatus.activePackageId ?? "unknown")")
-}
-```
-
-### 3. Fetch and Purchase Plans
-
-```swift
-// Fetch available plans
-let offerings = try await subscriptionUseCase.loadOfferings()
-
-if let packages = offerings?.packages {
-    for package in packages {
-        print("\(package.title): \(package.price)")
-    }
-
-    // Purchase a plan
-    if let package = packages.first {
-        let status = try await subscriptionUseCase.purchase(packageId: package.id)
-    }
-}
-```
-
-### 4. Real-time Observation
-
-```swift
-// Observe subscription status changes
-Task {
-    for await status in subscriptionUseCase.observeSubscriptionStatus() {
-        if status.isActive {
-            // Enable premium features
-        }
-    }
-}
-```
-
-## Usage Examples
-
-### SwiftUI Integration
-
-```swift
-import SwiftUI
-import Subscription
-
-struct ContentView: View {
-    @Environment(\.subscriptionUseCase) private var subscriptionUseCase
-    @State private var status: SubscriptionStatus = .inactive
-
-    var body: some View {
-        VStack {
-            if status.isActive {
-                Text("Premium Member")
-            } else {
-                Button("Subscribe to Premium") {
-                    Task { await showPaywall() }
-                }
-            }
-        }
-        .task {
-            guard let subscriptionUseCase else { return }
-            for await newStatus in subscriptionUseCase.observeSubscriptionStatus() {
-                status = newStatus
-            }
-        }
-    }
-
-    private func showPaywall() async {
-        // Paywall presentation
-    }
-}
-```
-
-Inject the use case at the App entry point:
-
-```swift
-@main
-struct MyApp: App {
-    private let subscriptionUseCase = SubscriptionUseCaseImpl(
-        configuration: SubscriptionConfiguration(apiKey: "your_revenuecat_api_key")
-    )
-
-    var body: some Scene {
-        WindowGroup {
-            ContentView()
-                .subscriptionUseCase(subscriptionUseCase)
-        }
-    }
-}
-```
-
-### User Authentication Integration
-
-```swift
-// On user login
-func userDidLogin(userId: String) async throws {
-    try await subscriptionUseCase.syncUser(userId: userId)
-}
-
-// On user logout
-func userDidLogout() async throws {
-    try await subscriptionUseCase.clearUser()
-}
-```
-
-### Error Handling
-
-```swift
-do {
-    let status = try await subscriptionUseCase.purchase(packageId: packageId)
-} catch let error as SubscriptionError {
-    switch error {
-    case .purchaseCancelled:
-        // User cancelled — no error display needed
-        break
-    case .networkError:
-        // Prompt retry on network error
-        showRetryAlert()
-    default:
-        showAlert(message: error.localizedDescription)
-    }
-}
-```
-
-## Dependencies
-
-- [RevenueCat SDK](https://github.com/RevenueCat/purchases-ios) (5.14.0+)
+Or in Xcode, `File > Add Package Dependencies...` with
+`https://github.com/no-problem-dev/swift-subscription`.
 
 ## License
 
-MIT License
-
-## Support
-
-For issues or feature requests, please create a [GitHub Issue](https://github.com/no-problem-dev/swift-subscription/issues).
+[MIT](./LICENSE)

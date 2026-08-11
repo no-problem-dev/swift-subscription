@@ -1,6 +1,8 @@
 import SwiftUI
 
-/// SubscriptionUseCase用の環境値キー
+/// The environment key backing `EnvironmentValues.subscriptionUseCase`.
+///
+/// Its default is `nil`, which is why the environment value is optional.
 public struct SubscriptionUseCaseKey: EnvironmentKey {
     public static var defaultValue: SubscriptionUseCase? {
         nil
@@ -8,9 +10,12 @@ public struct SubscriptionUseCaseKey: EnvironmentKey {
 }
 
 public extension EnvironmentValues {
-    /// サブスクリプションユースケースの環境値
+    /// The subscription use case, or `nil` when nothing injected one.
     ///
-    /// 使用例:
+    /// `nil` means the view is running outside the injection point — a preview, or a screen
+    /// reached before the modifier is applied. Treat it as "cannot sell anything here", not
+    /// as "not subscribed", or a preview will render as an expired paywall.
+    ///
     /// ```swift
     /// @Environment(\.subscriptionUseCase) private var subscriptionUseCase
     /// ```
@@ -20,16 +25,15 @@ public extension EnvironmentValues {
     }
 }
 
-/// SubscriptionUseCaseを注入するためのViewModifier
+/// Carries a ``SubscriptionUseCase`` into the environment across a package boundary.
 ///
-/// パッケージ境界を越えて環境値を確実に伝播させる。
-/// 通常は `View.subscriptionUseCase(_:)` モディファイア経由で使用する。
+/// Apply it with `View.subscriptionUseCase(_:)` rather than constructing it directly.
 public struct SubscriptionUseCaseModifier: ViewModifier {
     private let subscriptionUseCase: SubscriptionUseCase
 
-    /// `SubscriptionUseCaseModifier` を生成する。
+    /// Creates the modifier.
     ///
-    /// - Parameter subscriptionUseCase: 環境値として注入する `SubscriptionUseCase` インスタンス。
+    /// - Parameter subscriptionUseCase: The instance to publish to descendant views.
     public init(subscriptionUseCase: SubscriptionUseCase) {
         self.subscriptionUseCase = subscriptionUseCase
     }
@@ -41,22 +45,19 @@ public struct SubscriptionUseCaseModifier: ViewModifier {
 }
 
 public extension View {
-    /// SubscriptionUseCaseを注入する
+    /// Publishes a subscription use case to this view and its descendants.
     ///
-    /// - Parameter subscriptionUseCase: 使用するSubscriptionUseCaseインスタンス
-    /// - Returns: SubscriptionUseCaseが注入されたView
+    /// Apply it once, at the app's root, to the instance held for the process lifetime.
+    /// Applying it to a view that SwiftUI re-creates reconfigures the store SDK on every
+    /// rebuild.
     ///
-    /// 使用例:
     /// ```swift
-    /// let subscriptionConfig = SubscriptionConfiguration(
-    ///     apiKey: revenueCatAPIKey
-    /// )
-    /// let subscriptionUseCase = SubscriptionUseCaseImpl(
-    ///     configuration: subscriptionConfig
-    /// )
     /// ContentView()
     ///     .subscriptionUseCase(subscriptionUseCase)
     /// ```
+    ///
+    /// - Parameter subscriptionUseCase: The instance descendants should resolve.
+    /// - Returns: A view that publishes the instance to its descendants.
     func subscriptionUseCase(_ subscriptionUseCase: SubscriptionUseCase) -> some View {
         modifier(SubscriptionUseCaseModifier(subscriptionUseCase: subscriptionUseCase))
     }

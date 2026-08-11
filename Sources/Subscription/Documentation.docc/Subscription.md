@@ -1,66 +1,73 @@
 # ``Subscription``
 
-RevenueCat を使ったアプリ内課金・サブスクリプションを Swift らしい API で扱う軽量ライブラリ。
+Subscriptions and in-app purchases through RevenueCat, behind a small async API.
 
 ## Overview
 
-`Subscription` ライブラリは、iOS / macOS アプリにサブスクリプション機能を追加するための
-シンプルなインターフェースを提供します。RevenueCat SDK をラップし、
-購入フロー・状態監視・ユーザー同期を `async/await` ベースの API で統一します。
+`Subscription` wraps the RevenueCat SDK so an app deals in one protocol,
+``SubscriptionUseCase``, instead of the store's own types. It covers the four things a
+paywall needs: read the entitlement, list the products, buy one, and keep the answer current
+as renewals and expiries arrive.
+
+The distinction worth learning first is which read to trust.
+``SubscriptionUseCase/getSubscriptionStatus()`` returns a cached value and never leaves the
+device, so it is instant but starts out `.inactive` and stays there until a refresh lands.
+``SubscriptionUseCase/checkSubscriptionStatus()`` asks the store and is the answer to rely on
+when it decides whether a customer keeps access.
 
 ```swift
-// 1. 設定
-let config = SubscriptionConfiguration(
-    apiKey: "your_revenuecat_api_key",
-    entitlementId: "premium"
+let useCase = SubscriptionUseCaseImpl(
+    configuration: SubscriptionConfiguration(apiKey: apiKey, entitlementId: "premium")
 )
-let useCase = SubscriptionUseCaseImpl(configuration: config)
 
-// 2. 商品取得
-let offering = try await useCase.loadOfferings()
+guard let offering = try await useCase.loadOfferings() else { return }
 
-// 3. 購入
-if let package = offering?.packages.first {
-    let status = try await useCase.purchase(packageId: package.id)
-    print(status.isActive ? "購入完了" : "未加入")
-}
-
-// 4. 状態監視
-for await status in useCase.observeSubscriptionStatus() {
-    updateUI(isActive: status.isActive)
+do {
+    let status = try await useCase.purchase(packageId: offering.packages[0].id)
+    unlockPremium(status.isActive)
+} catch SubscriptionError.purchaseCancelled {
+    // The customer closed the sheet. Not a failure.
 }
 ```
 
-SwiftUI アプリでは `View.subscriptionUseCase(_:)` モディファイアで DI できます。
+Entitlements also change without the app asking — an overnight renewal, a lapse, a purchase
+made on another device. ``SubscriptionUseCase/observeSubscriptionStatus()`` reports those.
 
-```swift
-ContentView()
-    .subscriptionUseCase(useCase)
-```
+### Testing against the store
+
+Purchases cannot be exercised on a simulator started by `simctl`. A `.storekit`
+configuration file is applied only by an Xcode IDE Run; a `simctl` launch ignores it and
+falls through to the real App Store sandbox. Automated checks therefore cover the pure
+decision logic, and the purchase and restore paths need a device or an Xcode Run with a
+sandbox account.
 
 ## Topics
 
-### はじめに
+### Essentials
 
 - <doc:GettingStarted>
-
-### ユースケース
-
 - ``SubscriptionUseCase``
 - ``SubscriptionUseCaseImpl``
 
-### 設定・DI
+### Configuration
 
 - ``SubscriptionConfiguration``
-- ``SubscriptionUseCaseModifier``
 
-### モデル
+### Reading entitlement state
 
 - ``SubscriptionStatus``
+
+### Presenting a paywall
+
 - ``SubscriptionOffering``
 - ``SubscriptionPackage``
 - ``PackageDuration``
 
-### エラー
+### SwiftUI integration
+
+- ``SubscriptionUseCaseModifier``
+- ``SubscriptionUseCaseKey``
+
+### Errors
 
 - ``SubscriptionError``

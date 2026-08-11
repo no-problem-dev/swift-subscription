@@ -1,47 +1,75 @@
 import Foundation
 
-/// サブスクリプション処理で発生する可能性のあるエラー
+/// A failure raised by a subscription operation.
 ///
-/// ## エラーハンドリング例
+/// Only ``purchaseCancelled`` is an ordinary outcome; the rest are genuine failures. Match
+/// that case before any generic error handling, because presenting it as an error tells a
+/// customer that something broke when they simply changed their mind.
+///
+/// ## Example
 /// ```swift
 /// do {
 ///     let status = try await subscriptionUseCase.purchase(packageId: "annual")
-/// } catch let error as SubscriptionError {
-///     switch error {
-///     case .purchaseCancelled:
-///         // ユーザーがキャンセル - エラー表示不要
-///         break
-///     default:
-///         // エラーメッセージを表示
-///         showAlert(message: error.localizedDescription)
-///     }
+/// } catch SubscriptionError.purchaseCancelled {
+///     // Expected. Dismiss quietly.
 /// } catch {
-///     showAlert(message: "予期しないエラーが発生しました")
+///     showAlert(message: error.localizedDescription)
 /// }
 /// ```
 public enum SubscriptionError: Error, LocalizedError {
-    /// サブスクリプションシステムが初期化されていない
+    /// The API key was empty at configuration, so no store call can succeed.
+    ///
+    /// A build or environment problem rather than something the customer can resolve, and it
+    /// is raised by every operation until the key is supplied.
     case notConfigured
-    /// 設定情報が不正
+
+    /// The configuration was rejected. Never raised by this package.
     case invalidConfiguration(String)
-    /// ネットワーク通信エラー
+
+    /// The store could not be reached while reading the entitlement or the products.
+    ///
+    /// Worth a retry. Access already granted should be left alone, since being offline is
+    /// not evidence that a subscription ended.
     case networkError(Error)
-    /// ユーザーが購入をキャンセル
+
+    /// The customer dismissed the purchase sheet. Expected, and not an error to display.
     case purchaseCancelled
-    /// 購入処理に失敗
+
+    /// The purchase failed to complete, wrapping the store's reason.
+    ///
+    /// Covers a declined payment and an interrupted transaction alike. The entitlement is
+    /// unchanged, so nothing was charged for.
     case purchaseFailed(Error)
-    /// 購入の復元に失敗
+
+    /// The restore request was rejected by the store.
+    ///
+    /// Distinct from a successful restore that finds nothing, which returns `.inactive`
+    /// rather than throwing.
     case restoreFailed(Error)
-    /// プラン情報の取得に失敗
+
+    /// No products were available. Never raised by this package; a missing offering is
+    /// reported as `nil` from ``SubscriptionUseCase/loadOfferings()`` instead.
     case offeringsNotAvailable
-    /// 指定されたプランが見つからない
+
+    /// No package in the current offering has the requested identifier.
+    ///
+    /// Usually an App Store product identifier passed where the offering's package
+    /// identifier was expected, or a paywall built against an offering that is no longer
+    /// current.
     case packageNotFound(String)
-    /// ユーザーIDの同期に失敗
+
+    /// Attaching or detaching the billing identity failed, leaving purchases attributed to
+    /// the previous identity.
     case userSyncFailed(Error)
-    /// その他のエラー
+
+    /// An unclassified failure. Never raised by this package.
     case unknown(Error)
 
-    /// エラーの日本語説明文。`LocalizedError` 準拠により `localizedDescription` で参照される。
+    /// The message shown by `localizedDescription`.
+    ///
+    /// - Warning: These messages are hard-coded Japanese and are not localized, so they
+    ///   reach the customer in Japanese whatever the device language. Map the case to your
+    ///   own copy rather than displaying this directly.
     public var errorDescription: String? {
         switch self {
         case .notConfigured:

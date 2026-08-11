@@ -1,7 +1,8 @@
 import XCTest
 @testable import Subscription
 
-/// `SubscriptionUseCaseImpl` の状態キャッシュ更新をモックリポジトリ注入で検証する。
+/// Covers how `SubscriptionUseCaseImpl` updates its cached status, using an injected mock
+/// repository in place of the store.
 final class SubscriptionUseCaseImplTests: XCTestCase {
     private static let activeStatus = SubscriptionStatus(
         isActive: true,
@@ -10,7 +11,7 @@ final class SubscriptionUseCaseImplTests: XCTestCase {
         expirationDate: Date(timeIntervalSince1970: 1_900_000_000)
     )
 
-    // MARK: - 状態キャッシュ更新
+    // MARK: - Status cache updates
 
     func test_初期状態はinactive() async {
         let useCase = SubscriptionUseCaseImpl(repository: SubscriptionRepositoryMock())
@@ -43,7 +44,7 @@ final class SubscriptionUseCaseImplTests: XCTestCase {
             _ = try await useCase.checkSubscriptionStatus()
             XCTFail("エラーが投げられるべき")
         } catch {
-            // 期待通り
+            // Expected.
         }
 
         let cached = await useCase.getSubscriptionStatus()
@@ -125,7 +126,7 @@ final class SubscriptionUseCaseImplTests: XCTestCase {
         XCTAssertEqual(returned?.packages.map(\.id), ["annual"])
     }
 
-    // MARK: - 変更ストリームの反映
+    // MARK: - Change stream propagation
 
     func test_リポジトリの変更ストリームが状態キャッシュに反映される() async {
         let mock = SubscriptionRepositoryMock()

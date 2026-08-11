@@ -1,25 +1,29 @@
 import Foundation
 
-/// サブスクリプションリポジトリのプロトコル
+/// The billing backend, narrowed to the calls this package makes.
+///
+/// Everything here reaches the store, which is what keeps `RevenueCatRepository` out of the
+/// tests: the SDK cannot complete a purchase outside a real StoreKit session, so tests
+/// substitute this protocol instead.
 protocol SubscriptionRepository: Sendable {
-    /// サブスクリプション状態をチェック
+    /// Reads the authoritative entitlement state from the store.
     func checkSubscriptionStatus() async throws -> SubscriptionStatus
 
-    /// オファリング（商品情報）を読み込み
+    /// Fetches the currently marked offering, or `nil` when the dashboard marks none.
     func loadOfferings() async throws -> SubscriptionOffering?
 
-    /// 購入処理
+    /// Presents the purchase sheet and reports the entitlement once the purchase settles.
     func purchase(packageId: String) async throws -> SubscriptionStatus
 
-    /// 購入の復元
+    /// Re-applies purchases on the Apple Account; resolves to `.inactive` when there are none.
     func restorePurchases() async throws -> SubscriptionStatus
 
-    /// ユーザーIDでログイン
+    /// Attaches the billing identity to an app-level user identifier.
     func syncUser(userId: String) async throws
 
-    /// ログアウト
+    /// Returns the billing identity to an anonymous one.
     func clearUser() async throws
 
-    /// サブスクリプション状態の変更を監視
+    /// Streams entitlement changes pushed by the store, including ones this app did not cause.
     func observeSubscriptionChanges() -> AsyncStream<SubscriptionStatus>
 }

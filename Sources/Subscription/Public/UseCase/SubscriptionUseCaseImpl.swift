@@ -1,37 +1,36 @@
 import Foundation
 
-/// `SubscriptionUseCase` の RevenueCat バックエンド実装。
+/// The RevenueCat-backed implementation of ``SubscriptionUseCase``.
 ///
-/// `RevenueCatRepository` を介して App Store の課金処理を行い、
-/// 内部の `SubscriptionState` アクターでサブスクリプション状態をキャッシュする。
+/// Init configures the RevenueCat SDK as a side effect and starts a background task that
+/// keeps the cached status current, so the instance is doing work from the moment it is
+/// created. Create exactly one for the process and hand it out through the environment:
+/// the underlying SDK is configured globally, and a second instance reconfigures it.
 ///
-/// 初期化時に RevenueCat SDK を設定し、バックグラウンドでサブスクリプション状態の
-/// 変化を監視するタスクを起動する。インスタンスを破棄すると監視タスクは自動的に
-/// キャンセルされる。
-///
-/// - Note: このクラスは `Sendable` に準拠しており、Swift Concurrency 環境で安全に使用できる。
-///   インスタンスは通常アプリのルートで 1 つ生成し、環境値経由で配布する。
+/// The observation task is cancelled on `deinit`.
 public final class SubscriptionUseCaseImpl: SubscriptionUseCase {
     private let state: SubscriptionState
     private let repository: SubscriptionRepository
     nonisolated(unsafe) private var observationTask: Task<Void, Never>?
 
-    /// `SubscriptionConfiguration` を使ってインスタンスを生成する。
+    /// Configures the RevenueCat SDK and begins tracking entitlement changes.
     ///
-    /// RevenueCat SDK を設定し、サブスクリプション状態の変化を
-    /// バックグラウンドで継続的に監視するタスクを起動する。
+    /// Init does not reach the network and cannot fail; an unusable API key surfaces later as
+    /// ``SubscriptionError/notConfigured`` from the first call that needs the store. The
+    /// cached status is `.inactive` until the first refresh completes, so do not read
+    /// ``getSubscriptionStatus()`` straight after init and treat the answer as final.
     ///
-    /// - Parameter configuration: RevenueCat API キーとエンタイトルメント ID を含む設定値。
+    /// - Parameter configuration: The RevenueCat API key and the entitlement identifier that
+    ///   counts as subscribed.
     public convenience init(configuration: SubscriptionConfiguration) {
         self.init(repository: RevenueCatRepository(configuration: configuration))
     }
 
-    /// リポジトリを直接注入する内部イニシャライザ（テスト用の DI seam）。
+    /// Injects a repository directly. This is the seam that lets tests run without the SDK.
     init(repository: SubscriptionRepository) {
         self.state = SubscriptionState()
         self.repository = repository
 
-        // サブスクリプション状態の監視を開始
         self.observationTask = Task {
             await self.startObservingSubscriptionChanges()
         }
@@ -78,7 +77,8 @@ public final class SubscriptionUseCaseImpl: SubscriptionUseCase {
     public func syncUser(userId: String) async throws {
         try await repository.syncUser(userId: userId)
 
-        // 同期後、サブスクリプション状態をチェック
+        // Signing in swaps identities, so the entitlement read before the swap belongs to the
+        // previous identity. Re-read it here rather than carrying the stale value forward.
         let status = try await repository.checkSubscriptionStatus()
         await state.setUserId(userId)
         await state.setStatus(status)

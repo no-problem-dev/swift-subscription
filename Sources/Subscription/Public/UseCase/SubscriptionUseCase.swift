@@ -1,83 +1,96 @@
 import Foundation
 
-/// サブスクリプション機能を提供するユースケース
+/// Entitlement state and the purchase, restore, and sign-in calls that change it.
 ///
-/// アプリ内課金（サブスクリプション）の主要な操作を定義するプロトコル。
-/// RevenueCat を使用した実装として ``SubscriptionUseCaseImpl`` が提供される。
+/// Two accessors report entitlement state and they are not interchangeable:
+/// ``getSubscriptionStatus()`` reads an in-memory cache and never leaves the device,
+/// while ``checkSubscriptionStatus()`` is the authoritative read that contacts the
+/// store. Everything else here performs a network round trip.
 ///
-/// ## 主な機能
-/// - サブスクリプション状態の確認と監視
-/// - 利用可能なプランの取得
-/// - プランの購入と復元
-/// - ユーザー認証との連携
-///
-/// ## 使用例
+/// ## Example
 /// ```swift
-/// // 状態の確認
-/// let status = try await subscriptionUseCase.checkSubscriptionStatus()
-/// if status.isActive {
-///     // プレミアム機能を有効化
-/// }
-///
-/// // プランの購入
 /// let offerings = try await subscriptionUseCase.loadOfferings()
 /// if let package = offerings?.packages.first {
 ///     let status = try await subscriptionUseCase.purchase(packageId: package.id)
 /// }
-///
-/// // リアルタイム監視
-/// for await status in subscriptionUseCase.observeSubscriptionStatus() {
-///     // 状態変化に応じて UI を更新
-/// }
 /// ```
 public protocol SubscriptionUseCase: Sendable {
-    /// サブスクリプション状態の変化をリアルタイムで監視する
+    /// Opens a stream that yields a new status on purchase, renewal, expiry, and restore.
     ///
-    /// - Returns: サブスクリプション状態の変化を通知する `AsyncStream`
-    /// - Note: 状態が変化するたびに新しい値を返す
+    /// Each call opens its own stream; the store's own change feed is the source, so a
+    /// value can arrive without this app having asked for one — a renewal processed
+    /// overnight or a purchase made on another device both surface here.
+    ///
+    /// - Returns: A stream that stays open for the lifetime of the receiver. It finishes
+    ///   immediately, without yielding, when the package was configured with an empty API key.
     func observeSubscriptionStatus() -> AsyncStream<SubscriptionStatus>
 
-    /// キャッシュされた現在のサブスクリプション状態を取得する
+    /// Reads the cached status without contacting the store.
     ///
-    /// - Returns: 現在のサブスクリプション状態
-    /// - Note: サーバーへの問い合わせは行わず、キャッシュされた値を即座に返す
+    /// The cache starts at `.inactive` and is only filled by a successful refresh, so
+    /// early in a launch `.inactive` means "not known yet", not "not subscribed". Gating
+    /// paid features on this value alone locks a paying subscriber out of what they bought
+    /// until the first refresh lands.
+    ///
+    /// - Returns: The last observed status, or `.inactive` if nothing has been observed yet.
     func getSubscriptionStatus() async -> SubscriptionStatus
 
-    /// サーバーに問い合わせて最新のサブスクリプション状態を確認する
+    /// Fetches the authoritative status from the store and refreshes the cache.
     ///
-    /// - Returns: 最新のサブスクリプション状態
-    /// - Throws: ネットワークエラーやサーバーエラーが発生した場合
+    /// This is the call to trust when the answer decides whether someone keeps access.
+    /// A thrown error leaves the previous cached value in place rather than clearing it,
+    /// so a failed refresh does not revoke access from a subscriber who is merely offline.
+    ///
+    /// - Returns: The current entitlement state as the store reports it.
+    /// - Throws: ``SubscriptionError/networkError(_:)`` if the store cannot be reached,
+    ///   or ``SubscriptionError/notConfigured`` if the API key was empty at init.
     func checkSubscriptionStatus() async throws -> SubscriptionStatus
 
-    /// 購入可能なサブスクリプションプランを取得する
+    /// Fetches the products to display on a paywall.
     ///
-    /// - Returns: 利用可能なプラン情報（プランがない場合は `nil`）
-    /// - Throws: プラン情報の取得に失敗した場合
+    /// - Returns: The offering marked current in the RevenueCat dashboard, or `nil` when no
+    ///   offering is marked current. `nil` is a dashboard configuration problem, not a
+    ///   transport failure, and it leaves a paywall with nothing to sell.
+    /// - Throws: ``SubscriptionError/networkError(_:)`` if the products cannot be fetched.
     func loadOfferings() async throws -> SubscriptionOffering?
 
-    /// 指定されたプランを購入する
+    /// Presents the system purchase sheet for one package and refreshes the cache on success.
     ///
-    /// - Parameter packageId: 購入するプランの ID
-    /// - Returns: 購入後のサブスクリプション状態
-    /// - Throws: 購入処理に失敗した場合、またはユーザーがキャンセルした場合
+    /// - Parameter packageId: A ``SubscriptionPackage/id`` from ``loadOfferings()``. This is
+    ///   the offering's package identifier, not an App Store product identifier; passing a
+    ///   product identifier throws ``SubscriptionError/packageNotFound(_:)``.
+    /// - Returns: The entitlement state after the purchase settles.
+    /// - Throws: ``SubscriptionError/purchaseCancelled`` when the customer dismisses the
+    ///   sheet. That is an ordinary outcome, not a failure — surfacing it as an error alert
+    ///   is the most common mistake here.
     func purchase(packageId: String) async throws -> SubscriptionStatus
 
-    /// 過去に購入したプランを復元する
+    /// Re-applies purchases already tied to the signed-in Apple Account.
     ///
-    /// - Returns: 復元後のサブスクリプション状態
-    /// - Throws: 復元処理に失敗した場合
-    /// - Note: デバイス間でサブスクリプションを同期する際に使用する
+    /// Returning normally is not evidence of an entitlement: when there is nothing to
+    /// restore this succeeds and returns `.inactive`. Branch on the returned
+    /// ``SubscriptionStatus/isActive``, not on the absence of a thrown error, or a customer
+    /// who never subscribed will be told their purchases were restored.
+    ///
+    /// - Returns: The entitlement state after the restore.
+    /// - Throws: ``SubscriptionError/restoreFailed(_:)`` if the store rejects the request.
     func restorePurchases() async throws -> SubscriptionStatus
 
-    /// ユーザー ID をサブスクリプションシステムと同期する
+    /// Binds subsequent purchases to an app-level user identifier and refreshes the cache.
     ///
-    /// - Parameter userId: 同期するユーザー ID
-    /// - Throws: 同期処理に失敗した場合
-    /// - Note: ユーザー認証後に呼び出す
+    /// Call this after the customer signs in. Until it is called, purchases are attributed
+    /// to an anonymous identity, so an entitlement bought before sign-in does not follow the
+    /// account to another device.
+    ///
+    /// - Parameter userId: The app's stable identifier for the signed-in account.
+    /// - Throws: ``SubscriptionError/userSyncFailed(_:)`` if sign-in is rejected.
     func syncUser(userId: String) async throws
 
-    /// ユーザーをログアウトしてサブスクリプション情報をクリアする
+    /// Returns to an anonymous identity and resets the cached status to `.inactive`.
     ///
-    /// - Throws: ログアウト処理に失敗した場合
+    /// Call this on sign-out. Skipping it leaves the previous account's entitlement readable
+    /// by whoever signs in next on the same device.
+    ///
+    /// - Throws: ``SubscriptionError/userSyncFailed(_:)`` if sign-out is rejected.
     func clearUser() async throws
 }
