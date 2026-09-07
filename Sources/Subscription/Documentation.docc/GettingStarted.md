@@ -77,7 +77,7 @@ Views resolve it from the environment, where it is optional because previews and
 outside the injection point get `nil`:
 
 ```swift
-struct PaywallView: View {
+struct UpgradeScreen: View {
     @Environment(\.subscriptionUseCase) private var subscriptionUseCase
 }
 ```
@@ -122,9 +122,27 @@ during it.
 
 ## Build the paywall
 
-Present whatever the current offering contains rather than assuming a fixed monthly and
-annual pair — which offering is current is a server-side decision that changes without an
-app release.
+The `SubscriptionUI` product draws the structure — the plans, the purchase button, the restore
+button and the legal links — and leaves the pages to you:
+
+```swift
+import SubscriptionUI
+
+PaywallView(
+    pages: [PaywallPage(id: "unlock") { UnlockArtwork() }],
+    links: PaywallLegalLinks(terms: termsURL, privacy: privacyURL),
+    onEntitled: { dismiss() },
+    onError: { presentedError = $0 }
+)
+```
+
+It reads the use case out of the environment, loads the current offering, puts the annual plan
+first and preselects it. The amount that will be charged is the largest text in each row, which
+is App Store Review 3.1.2(c) and the reason the row has no font parameters.
+
+Drawing your own instead is a decision worth making deliberately. Present whatever the current
+offering contains rather than assuming a fixed monthly and annual pair — which offering is
+current is a server-side decision that changes without an app release.
 
 ```swift
 let offering = try await subscriptionUseCase.loadOfferings()
@@ -134,7 +152,9 @@ for package in offering?.packages ?? [] {
 ```
 
 `price` and `pricePerMonth` arrive formatted for the customer's storefront. Do not reformat
-them or assume a currency symbol.
+them or assume a currency symbol. `price` is what the customer is charged and `pricePerMonth` is
+a derived marketing figure: making the second one the headline is the most common way to fail
+review here.
 
 ``PackageDuration`` raw values are stable identifiers for logging, not labels. Switch over the
 case to build a label your app owns and localizes.
