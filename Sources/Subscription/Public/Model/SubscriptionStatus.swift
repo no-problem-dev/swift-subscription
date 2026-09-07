@@ -1,6 +1,7 @@
 import Foundation
 
-/// Whether the customer is entitled right now, and what backs that entitlement.
+/// Whether the customer is entitled right now, what backs that entitlement, and how the
+/// answer was obtained.
 ///
 /// A value is a reading taken at one moment, not a live view. Nothing in it expires on its
 /// own, so a value held across a subscription lapse keeps reporting `isActive`. Re-read it
@@ -27,33 +28,60 @@ public struct SubscriptionStatus: Sendable, Equatable {
     /// alongside `isActive == true` during the store's grace period for a failed payment.
     public let expirationDate: Date?
 
+    /// Where this reading came from: the store, the cache, or nowhere yet.
+    ///
+    /// Access does not depend on it — a reading replayed from the cache unlocks exactly what a
+    /// confirmed one does — but telling "not subscribed" apart from "not known yet" does, and
+    /// so does anything the app says out loud about the state of the subscription.
+    public let verification: EntitlementVerification
+
     /// Creates a status.
     ///
     /// Provided for tests and previews. Values that describe a real customer come from the
-    /// use case; one constructed here is a fixture and grants nothing on its own.
+    /// use case; one constructed here is a fixture and grants nothing on its own, which is why
+    /// `verification` defaults to ``EntitlementVerification/unverified``.
     ///
     /// - Parameters:
     ///   - isActive: Whether paid features should be unlocked.
     ///   - activeEntitlementId: The entitlement that granted access.
     ///   - activePackageId: The store product backing the entitlement.
     ///   - expirationDate: When access lapses; `nil` for a lifetime purchase.
+    ///   - verification: Where the reading came from. Defaults to `.unverified`.
     public init(
         isActive: Bool,
         activeEntitlementId: String? = nil,
         activePackageId: String? = nil,
-        expirationDate: Date? = nil
+        expirationDate: Date? = nil,
+        verification: EntitlementVerification = .unverified
     ) {
         self.isActive = isActive
         self.activeEntitlementId = activeEntitlementId
         self.activePackageId = activePackageId
         self.expirationDate = expirationDate
+        self.verification = verification
     }
 
-    /// The not-entitled reading, and the value the cache holds before the first refresh.
+    /// The not-entitled, never-verified reading: what a first launch holds before anything has
+    /// been read and with nothing in the cache.
     public static let inactive = SubscriptionStatus(
         isActive: false,
         activeEntitlementId: nil,
         activePackageId: nil,
-        expirationDate: nil
+        expirationDate: nil,
+        verification: .unverified
     )
+
+    /// The same reading, stamped as one the store answered at this moment.
+    ///
+    /// The repository reports what the entitlement *is*; only the use case knows when it was
+    /// asked, so the stamp is applied there rather than at the store boundary.
+    func confirmed(at date: Date) -> SubscriptionStatus {
+        SubscriptionStatus(
+            isActive: isActive,
+            activeEntitlementId: activeEntitlementId,
+            activePackageId: activePackageId,
+            expirationDate: expirationDate,
+            verification: .confirmed(at: date)
+        )
+    }
 }

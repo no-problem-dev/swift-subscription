@@ -1,9 +1,11 @@
 import XCTest
 @testable import Subscription
 
-/// Covers how `SubscriptionUseCaseImpl` updates its cached status, using an injected mock
-/// repository in place of the store.
+/// Covers how `SubscriptionUseCaseImpl` updates the entitlement it runs on, using an injected
+/// mock repository in place of the store.
 final class SubscriptionUseCaseImplTests: XCTestCase {
+    /// The reading the mock repository answers with, as the repository reports it: unstamped,
+    /// because only the use case knows when it asked.
     private static let activeStatus = SubscriptionStatus(
         isActive: true,
         activeEntitlementId: "premium",
@@ -11,10 +13,30 @@ final class SubscriptionUseCaseImplTests: XCTestCase {
         expirationDate: Date(timeIntervalSince1970: 1_900_000_000)
     )
 
+    /// A clock the tests hold still, so a stamped reading can be compared exactly.
+    private static let fixedNow = Date(timeIntervalSince1970: 1_800_000_000)
+
+    /// The same reading once it has been through the use case.
+    private static var confirmedActiveStatus: SubscriptionStatus {
+        activeStatus.confirmed(at: fixedNow)
+    }
+
+    private static func makeUseCase(
+        repository: SubscriptionRepository,
+        entitlementCache: any EntitlementCache = InMemoryEntitlementCache(),
+        now: Date = fixedNow
+    ) -> SubscriptionUseCaseImpl {
+        SubscriptionUseCaseImpl(
+            repository: repository,
+            entitlementCache: entitlementCache,
+            now: { now }
+        )
+    }
+
     // MARK: - Status cache updates
 
     func test_初期状態はinactive() async {
-        let useCase = SubscriptionUseCaseImpl(repository: SubscriptionRepositoryMock())
+        let useCase = Self.makeUseCase(repository: SubscriptionRepositoryMock())
 
         let status = await useCase.getSubscriptionStatus()
 
@@ -24,19 +46,19 @@ final class SubscriptionUseCaseImplTests: XCTestCase {
     func test_checkSubscriptionStatusの結果が状態キャッシュに反映される() async throws {
         let mock = SubscriptionRepositoryMock()
         await mock.setStatus(Self.activeStatus)
-        let useCase = SubscriptionUseCaseImpl(repository: mock)
+        let useCase = Self.makeUseCase(repository: mock)
 
         let returned = try await useCase.checkSubscriptionStatus()
 
-        XCTAssertEqual(returned, Self.activeStatus)
+        XCTAssertEqual(returned, Self.confirmedActiveStatus)
         let cached = await useCase.getSubscriptionStatus()
-        XCTAssertEqual(cached, Self.activeStatus)
+        XCTAssertEqual(cached, Self.confirmedActiveStatus)
     }
 
     func test_checkSubscriptionStatusが失敗しても状態キャッシュは変わらない() async throws {
         let mock = SubscriptionRepositoryMock()
         await mock.setStatus(Self.activeStatus)
-        let useCase = SubscriptionUseCaseImpl(repository: mock)
+        let useCase = Self.makeUseCase(repository: mock)
         _ = try await useCase.checkSubscriptionStatus()
 
         await mock.setError(SubscriptionError.notConfigured)
@@ -48,50 +70,50 @@ final class SubscriptionUseCaseImplTests: XCTestCase {
         }
 
         let cached = await useCase.getSubscriptionStatus()
-        XCTAssertEqual(cached, Self.activeStatus)
+        XCTAssertEqual(cached, Self.confirmedActiveStatus)
     }
 
     func test_purchaseの結果が状態キャッシュに反映される() async throws {
         let mock = SubscriptionRepositoryMock()
         await mock.setStatus(Self.activeStatus)
-        let useCase = SubscriptionUseCaseImpl(repository: mock)
+        let useCase = Self.makeUseCase(repository: mock)
 
         let returned = try await useCase.purchase(packageId: "annual")
 
-        XCTAssertEqual(returned, Self.activeStatus)
+        XCTAssertEqual(returned, Self.confirmedActiveStatus)
         let cached = await useCase.getSubscriptionStatus()
-        XCTAssertEqual(cached, Self.activeStatus)
+        XCTAssertEqual(cached, Self.confirmedActiveStatus)
     }
 
     func test_restorePurchasesの結果が状態キャッシュに反映される() async throws {
         let mock = SubscriptionRepositoryMock()
         await mock.setStatus(Self.activeStatus)
-        let useCase = SubscriptionUseCaseImpl(repository: mock)
+        let useCase = Self.makeUseCase(repository: mock)
 
         let returned = try await useCase.restorePurchases()
 
-        XCTAssertEqual(returned, Self.activeStatus)
+        XCTAssertEqual(returned, Self.confirmedActiveStatus)
         let cached = await useCase.getSubscriptionStatus()
-        XCTAssertEqual(cached, Self.activeStatus)
+        XCTAssertEqual(cached, Self.confirmedActiveStatus)
     }
 
     func test_syncUserは同期後の状態をキャッシュする() async throws {
         let mock = SubscriptionRepositoryMock()
         await mock.setStatus(Self.activeStatus)
-        let useCase = SubscriptionUseCaseImpl(repository: mock)
+        let useCase = Self.makeUseCase(repository: mock)
 
         try await useCase.syncUser(userId: "user-1")
 
         let syncedUserIds = await mock.syncedUserIds
         XCTAssertEqual(syncedUserIds, ["user-1"])
         let cached = await useCase.getSubscriptionStatus()
-        XCTAssertEqual(cached, Self.activeStatus)
+        XCTAssertEqual(cached, Self.confirmedActiveStatus)
     }
 
     func test_clearUserで状態キャッシュがinactiveに戻る() async throws {
         let mock = SubscriptionRepositoryMock()
         await mock.setStatus(Self.activeStatus)
-        let useCase = SubscriptionUseCaseImpl(repository: mock)
+        let useCase = Self.makeUseCase(repository: mock)
         _ = try await useCase.checkSubscriptionStatus()
 
         try await useCase.clearUser()
@@ -118,7 +140,7 @@ final class SubscriptionUseCaseImplTests: XCTestCase {
             ]
         )
         await mock.setOffering(offering)
-        let useCase = SubscriptionUseCaseImpl(repository: mock)
+        let useCase = Self.makeUseCase(repository: mock)
 
         let returned = try await useCase.loadOfferings()
 
@@ -130,12 +152,12 @@ final class SubscriptionUseCaseImplTests: XCTestCase {
 
     func test_リポジトリの変更ストリームが状態キャッシュに反映される() async {
         let mock = SubscriptionRepositoryMock()
-        let useCase = SubscriptionUseCaseImpl(repository: mock)
+        let useCase = Self.makeUseCase(repository: mock)
 
         mock.changesContinuation.yield(Self.activeStatus)
 
         let reflected = await Self.waitUntil {
-            await useCase.getSubscriptionStatus() == Self.activeStatus
+            await useCase.getSubscriptionStatus() == Self.confirmedActiveStatus
         }
         XCTAssertTrue(reflected, "ストリームに流した状態がキャッシュに反映されること")
     }
@@ -149,10 +171,10 @@ final class SubscriptionUseCaseImplTests: XCTestCase {
     func test_同期に失敗しても直前の身元のエンタイトルメントは残らない() async throws {
         let mock = SubscriptionRepositoryMock()
         await mock.setStatus(Self.activeStatus)
-        let useCase = SubscriptionUseCaseImpl(repository: mock)
+        let useCase = Self.makeUseCase(repository: mock)
         _ = try await useCase.checkSubscriptionStatus()
         let before = await useCase.getSubscriptionStatus()
-        XCTAssertEqual(before, Self.activeStatus)
+        XCTAssertEqual(before, Self.confirmedActiveStatus)
 
         // Sign-in lands; the entitlement read that follows it does not.
         await mock.setCheckStatusError(SubscriptionError.networkError(URLError(.notConnectedToInternet)))
@@ -173,7 +195,7 @@ final class SubscriptionUseCaseImplTests: XCTestCase {
     /// caller who writes that `catch` believes the "nothing to sell" path is covered, and it never
     /// runs.
     func test_現在のオファリングが無いときは投げずにnilを返す() async throws {
-        let useCase = SubscriptionUseCaseImpl(repository: SubscriptionRepositoryMock())
+        let useCase = Self.makeUseCase(repository: SubscriptionRepositoryMock())
 
         let returned = try await useCase.loadOfferings()
 
@@ -207,7 +229,7 @@ final class SubscriptionUseCaseImplTests: XCTestCase {
 
     private static func makeThenRelease(repository: SubscriptionRepositoryMock) async -> WeakBox {
         let box = WeakBox()
-        let useCase = SubscriptionUseCaseImpl(repository: repository)
+        let useCase = makeUseCase(repository: repository)
         box.value = useCase
         // Let the observation task reach its suspension point on the change feed.
         _ = await useCase.getSubscriptionStatus()

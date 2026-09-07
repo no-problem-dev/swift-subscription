@@ -10,14 +10,20 @@ paywall needs: read the entitlement, list the products, buy one, and keep the an
 as renewals and expiries arrive.
 
 The distinction worth learning first is which read to trust.
-``SubscriptionUseCase/getSubscriptionStatus()`` returns a cached value and never leaves the
-device, so it is instant but starts out `.inactive` and stays there until a refresh lands.
-``SubscriptionUseCase/checkSubscriptionStatus()`` asks the store and is the answer to rely on
-when it decides whether a customer keeps access.
+``SubscriptionUseCase/getSubscriptionStatus()`` answers from what the device already knows and
+never leaves it, so it is instant. ``SubscriptionUseCase/checkSubscriptionStatus()`` asks the
+store and is the answer to rely on when it decides whether a customer keeps access.
+
+What the device already knows outlives the process. Every reading the store confirms is written
+to an ``EntitlementCache`` you supply, so a cold launch with no network starts from the
+entitlement the store last confirmed instead of from "not subscribed" — the difference between
+a paying customer using the app on a train and a paying customer looking at a paywall. Readings
+carry a ``SubscriptionStatus/verification`` saying which they are.
 
 ```swift
 let useCase = SubscriptionUseCaseImpl(
-    configuration: SubscriptionConfiguration(apiKey: apiKey, entitlementId: "premium")
+    configuration: SubscriptionConfiguration(apiKey: apiKey, entitlementId: "premium"),
+    entitlementCache: FileEntitlementCache(url: entitlementFileURL)
 )
 
 guard let offering = try await useCase.loadOfferings() else { return }
@@ -56,6 +62,15 @@ sandbox account.
 ### Reading entitlement state
 
 - ``SubscriptionStatus``
+- ``EntitlementVerification``
+
+### Keeping the entitlement between launches
+
+- ``EntitlementCache``
+- ``CachedEntitlement``
+- ``FileEntitlementCache``
+- ``UserDefaultsEntitlementCache``
+- ``InMemoryEntitlementCache``
 
 ### Presenting a paywall
 

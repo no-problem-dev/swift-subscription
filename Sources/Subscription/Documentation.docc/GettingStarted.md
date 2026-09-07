@@ -17,8 +17,8 @@ Subscriptions are configured in three places that must agree, and the most commo
    is a dashboard problem rather than a failure it can report as an error.
 
 The entitlement identifier you choose has to be passed to
-``SubscriptionConfiguration/init(apiKey:entitlementId:customAttributesSetter:)`` exactly. A
-mismatch does not raise an error — it makes every paying customer look unsubscribed.
+``SubscriptionConfiguration/init(apiKey:entitlementId:gracePeriod:customAttributesSetter:)``
+exactly. A mismatch does not raise an error — it makes every paying customer look unsubscribed.
 
 ## Create the use case
 
@@ -28,16 +28,31 @@ instance reconfigures it.
 ```swift
 import Subscription
 
+let entitlementFile = URL.applicationSupportDirectory
+    .appending(path: "Subscription/entitlement.json")
+
 let subscriptionUseCase: SubscriptionUseCase = SubscriptionUseCaseImpl(
     configuration: SubscriptionConfiguration(
         apiKey: "appl_xxxxxxxxxxxxxxxxxxxxxxxxxx",
         entitlementId: "premium"
-    )
+    ),
+    entitlementCache: FileEntitlementCache(url: entitlementFile)
 )
 ```
 
 Use the platform's *public* SDK key. It ships inside the app and is readable by anyone who
 inspects the binary.
+
+### Choosing where the entitlement is kept
+
+The cache has no default, because the choice belongs to the app. ``FileEntitlementCache`` is
+the plain answer. Use ``UserDefaultsEntitlementCache`` with an app group's suite when a widget
+or an extension has to know whether the customer is entitled — `UserDefaults.standard` is a
+different suite in each of them and is never the right answer here. Conform to
+``EntitlementCache`` yourself to put the record in the keychain, which is the only place that
+survives deleting the app.
+
+``InMemoryEntitlementCache`` opts out. Shipping it means every cold launch starts unverified.
 
 In a SwiftUI app, inject it once at the root:
 
@@ -45,7 +60,8 @@ In a SwiftUI app, inject it once at the root:
 @main
 struct MyApp: App {
     private let subscriptionUseCase: SubscriptionUseCase = SubscriptionUseCaseImpl(
-        configuration: SubscriptionConfiguration(apiKey: "appl_xxxxxx")
+        configuration: SubscriptionConfiguration(apiKey: "appl_xxxxxx"),
+        entitlementCache: FileEntitlementCache(url: entitlementFile)
     )
 
     var body: some Scene {
@@ -71,17 +87,38 @@ struct PaywallView: View {
 Two reads exist and choosing the wrong one is the mistake that reaches customers.
 
 ```swift
-// Instant, from cache. `.inactive` here can mean "not known yet".
-let cached = await subscriptionUseCase.getSubscriptionStatus()
+// Instant, from what the device already knows.
+let known = await subscriptionUseCase.getSubscriptionStatus()
 
 // Authoritative, over the network. Use this when it decides access.
 let current = try await subscriptionUseCase.checkSubscriptionStatus()
 ```
 
-At launch the cache is `.inactive` because nothing has filled it yet. Locking premium
-features on that value alone shuts a paying subscriber out of what they bought for as long
-as the first refresh takes. Render the optimistic state, or a neutral one, until a refresh
-lands.
+`isActive` is still the only field to branch on for access — a reading replayed from the cache
+unlocks exactly what a confirmed one does. Branch on
+``SubscriptionStatus/verification`` for anything else:
+
+```swift
+switch status.verification {
+case .confirmed:
+    break                       // The store answered in this launch.
+case .lastKnown(let date):
+    // Running on what the store last said, at `date`. Fine to unlock on; not fine to
+    // *state* — do not tell someone their subscription renewed on the strength of this.
+    break
+case .unverified:
+    // Nothing is known yet. Not the same as "not subscribed": showing a paywall on this
+    // shows it to paying customers too. Render a neutral state until a refresh lands.
+    break
+}
+```
+
+An entitlement replayed from the cache stops being honoured
+``SubscriptionConfiguration/gracePeriod`` after its expiration date. The grace covers a renewal
+this device has not been online to see; past it, a lapsed subscription is a lapsed
+subscription. It is never applied to a reading the store answered, because the store runs a
+billing-retry grace of its own and reports an active entitlement with a date already past
+during it.
 
 ## Build the paywall
 
@@ -153,7 +190,12 @@ try await subscriptionUseCase.clearUser()                 // after sign-out
 ```
 
 Skipping the sign-out call leaves the previous account's entitlement readable by whoever
-signs in next on that device.
+signs in next on that device — and, now that the entitlement outlives the process, on the next
+launch too.
+
+Signing in with an identity that differs from the one on record drops the cached entitlement
+immediately, before the refresh that follows can fail. Signing the same identity back in drops
+nothing, which is what lets a relaunch out of signal keep what the device already confirmed.
 
 ## What you cannot test on a simulator
 
