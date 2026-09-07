@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- The test gate is back in CI. `.github/workflows/tests.yml` was removed on 2026-08-11, after
+  1.0.5 had been tagged, which left that release's "Workflows synced to the shared template
+  (tests, release-on-tag)" line describing something the repository no longer had. Every push
+  and pull request now resolves dependencies fresh and runs `swift build` and `swift test`.
+
 ## [1.0.5] - 2026-07-19
 
 ### Added
