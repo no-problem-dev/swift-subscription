@@ -87,3 +87,29 @@ jobs:
 
       - name: Run Tests
         run: swift test
+
+      # `swift test` はホスト（macOS）向けにビルドするので、`#if canImport(UIKit)` /
+      # `#if os(iOS)` の中は**コンパイルすらされない**。型エラーでも構文エラーでも緑を通る。
+      #
+      # 実測（2026-09-08・swift-document-scanner）: ガードの中に型エラーを 1 つ仕込むと
+      # `swift test` は error 0 件で緑のまま。この step だけが TEST BUILD FAILED で捕まえた。
+      #
+      # つまり agent-runtime 0.18.0 の事故（コンパイルできないテストのままタグ付け）は、
+      # **iOS 限定のコードについては tests.yml を戻しただけでは再発する。** ここが塞ぐ。
+      # roomtone の Infrastructure で実例が出ている（61 本中 31 本が `#if os(iOS)` の中で、
+      # シグネチャ変更に未追随のままコンパイルできず、それでも関所は緑だった）。
+      #
+      # **走らせない。ビルドするだけ。** スナップショットの像の照合はローカルのまま（§7）で、
+      # ここが見るのは「そのコードがコンパイルできるか」だけ。destination が generic なので
+      # シミュレータの起動も要らず、実測 32 秒。
+      - name: Build tests for iOS (compile only)
+        run: |
+          if ! grep -q '\.iOS(' Package.swift; then
+            echo "iOS を宣言していないパッケージなので飛ばす"
+            exit 0
+          fi
+          SCHEME=$(xcodebuild -list -json | python3 -c \
+            'import json,sys; print(next(s for s in json.load(sys.stdin)["workspace"]["schemes"] if s.endswith("-Package")))')
+          echo "scheme: $SCHEME"
+          xcodebuild build-for-testing -scheme "$SCHEME" \
+            -destination 'generic/platform=iOS Simulator' -quiet
