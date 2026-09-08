@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-09-08
+
 ### Added
 - The entitlement now survives a launch. `EntitlementCache` is a place the app supplies, every
   reading the store confirms is written to it, and a launch that cannot reach the store starts
