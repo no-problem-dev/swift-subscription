@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- A `SubscriptionRevenueCatUI` product, the only one that links RevenueCatUI. It carries
+  `RevenueCatPaywallView`, which shows a paywall designed with RevenueCat Paywalls for an
+  offering (the current one for `nil`), and `PaywallContainer`, which shows either that or the
+  app's own paywall from one place. After a purchase or a restore the RevenueCat paywall asks the
+  `SubscriptionUseCase` whether the customer is entitled, rather than reading the `CustomerInfo`
+  RevenueCatUI hands back, so the configured entitlement decides and the `EntitlementCache` is
+  refreshed; a restore that finds nothing does not count as entitled.
+- `PaywallMode` in `SubscriptionUI`: `.custom`, `.revenueCat(offering:)` and
+  `.automatic(offering:)`, with `.revenueCat` and `.automatic` as shorthands for the current
+  offering. A struct rather than an enum, because an enum case with an associated value and a
+  static property of the same name make `PaywallMode.automatic` ambiguous. `PaywallMode.choice(for:)` is the pure rule that turns the mode and a
+  `PaywallOfferingLookup` into a `PaywallChoice`; everything that stops a RevenueCat paywall from
+  being shown falls back to the app's own. Held in `SubscriptionUI` so that an app can keep the
+  setting without linking RevenueCatUI.
+- `PaywallHandlers`: the `onEntitled` / `onError` / `onDismiss` that `PaywallContainer` passes
+  to the closure building the app's own paywall, so both paywalls report in the same three
+  callbacks.
+
+### Changed
+- The minimum RevenueCat SDK is now 5.19.0, the first with `Offering.hasPaywall`.
+
 ## [2.0.0] - 2026-09-08
 
 ### Added
