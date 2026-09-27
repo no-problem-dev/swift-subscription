@@ -57,9 +57,25 @@ struct PaywallModeTests {
         #expect(PaywallMode.automatic(offering: "summer").offeringIdentifier == "summer")
     }
 
-    @Test("引数なしの .revenueCat と .automatic は current の offering")
-    func shorthands() {
-        #expect(PaywallMode.revenueCat == .revenueCat(offering: nil))
-        #expect(PaywallMode.automatic == .automatic(offering: nil))
+    private static let automaticByName = PaywallMode.automatic
+    private static let revenueCatByName = PaywallMode.revenueCat
+
+    @Test("型名から書いた PaywallMode.automatic と .revenueCat は current の offering")
+    func shorthandsByTypeName() {
+        #expect(Self.automaticByName == .automatic(offering: nil))
+        #expect(Self.automaticByName.offeringIdentifier == nil)
+        #expect(Self.automaticByName.choice(for: .noPaywall) == .custom)
+        #expect(Self.revenueCatByName == .revenueCat(offering: nil))
+        #expect(Self.revenueCatByName.offeringIdentifier == nil)
+        #expect(Self.revenueCatByName.choice(for: .noPaywall) == .revenueCat)
+    }
+
+    @Test("型を明示した代入の .automatic と .revenueCat は current の offering")
+    func shorthandsByContextualType() {
+        let automatic: PaywallMode = .automatic
+        let revenueCat: PaywallMode = .revenueCat
+        #expect(automatic == .automatic(offering: nil))
+        #expect(revenueCat == .revenueCat(offering: nil))
+        #expect(automatic != revenueCat)
     }
 }

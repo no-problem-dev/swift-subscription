@@ -7,19 +7,45 @@ import Foundation
 /// ``choice(for:)`` once the offering has been looked up, and anything that goes wrong on the
 /// RevenueCat side ends at the app's own paywall rather than at an empty sheet.
 ///
+/// A struct rather than an enum so that `PaywallMode.automatic` and `.revenueCat` can name the
+/// current offering: an enum case with an associated value and a static property of the same
+/// name make `PaywallMode.automatic` ambiguous.
+///
 /// This type lives here, and not beside the RevenueCat paywall, so that an app can hold and
 /// switch the setting without linking RevenueCatUI. Showing a RevenueCat paywall needs the
 /// `SubscriptionRevenueCatUI` product.
-public enum PaywallMode: Sendable, Hashable {
+public struct PaywallMode: Sendable, Hashable {
+    private enum Kind: Sendable, Hashable {
+        case custom
+        case revenueCat
+        case automatic
+    }
+
+    private let kind: Kind
+    private let offering: String?
+
+    private init(_ kind: Kind, offering: String?) {
+        self.kind = kind
+        self.offering = offering
+    }
+
     /// Always the app's own paywall. RevenueCat is not asked anything.
-    case custom
+    public static let custom = PaywallMode(.custom, offering: nil)
+
+    /// The RevenueCat paywall for the current offering.
+    public static let revenueCat = PaywallMode(.revenueCat, offering: nil)
+
+    /// The RevenueCat paywall for the current offering if it has one, the app's own otherwise.
+    public static let automatic = PaywallMode(.automatic, offering: nil)
 
     /// The RevenueCat paywall for an offering, `nil` meaning the current one.
     ///
     /// Shown even when the offering has no paywall attached in the dashboard, in which case
     /// RevenueCatUI draws its default one from the offering's packages. Only an offering that
     /// cannot be found or loaded falls back to the app's own paywall.
-    case revenueCat(offering: String?)
+    public static func revenueCat(offering: String?) -> PaywallMode {
+        PaywallMode(.revenueCat, offering: offering)
+    }
 
     /// The RevenueCat paywall when the offering has one attached in the dashboard, and the
     /// app's own paywall otherwise.
@@ -27,25 +53,16 @@ public enum PaywallMode: Sendable, Hashable {
     /// The setting to ship with when the dashboard is where paywalls are designed but not every
     /// offering has one yet: attaching a paywall switches it on without an app release, and
     /// detaching it switches it off.
-    case automatic(offering: String?)
-
-    /// The RevenueCat paywall for the current offering.
-    public static var revenueCat: PaywallMode { .revenueCat(offering: nil) }
-
-    /// The RevenueCat paywall for the current offering if it has one, the app's own otherwise.
-    public static var automatic: PaywallMode { .automatic(offering: nil) }
+    public static func automatic(offering: String?) -> PaywallMode {
+        PaywallMode(.automatic, offering: offering)
+    }
 
     /// The offering to look up, or `nil` for the current one.
     ///
     /// Also `nil` for ``custom``, which looks nothing up; ask ``needsLookup`` to tell the two
     /// apart.
     public var offeringIdentifier: String? {
-        switch self {
-        case .custom:
-            return nil
-        case .revenueCat(let offering), .automatic(let offering):
-            return offering
-        }
+        kind == .custom ? nil : offering
     }
 
     /// Whether ``choice(for:)`` depends on anything RevenueCat knows.
@@ -53,7 +70,7 @@ public enum PaywallMode: Sendable, Hashable {
     /// `false` only for ``custom``, which shows the app's paywall straight away, without a
     /// loading state and without a network round trip.
     public var needsLookup: Bool {
-        self != .custom
+        kind != .custom
     }
 
     /// The paywall to show, given what the lookup of the offering found.
@@ -67,7 +84,7 @@ public enum PaywallMode: Sendable, Hashable {
     /// - Parameter lookup: What looking up ``offeringIdentifier`` found.
     /// - Returns: The paywall to show.
     public func choice(for lookup: PaywallOfferingLookup) -> PaywallChoice {
-        switch (self, lookup) {
+        switch (kind, lookup) {
         case (.custom, _):
             return .custom
         case (_, .offeringMissing), (_, .unavailable):

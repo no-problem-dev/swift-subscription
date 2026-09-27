@@ -17,7 +17,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   refreshed; a restore that finds nothing does not count as entitled.
 - `PaywallMode` in `SubscriptionUI`: `.custom`, `.revenueCat(offering:)` and
   `.automatic(offering:)`, with `.revenueCat` and `.automatic` as shorthands for the current
-  offering. `PaywallMode.choice(for:)` is the pure rule that turns the mode and a
+  offering. A struct rather than an enum, because an enum case with an associated value and a
+  static property of the same name make `PaywallMode.automatic` ambiguous. `PaywallMode.choice(for:)` is the pure rule that turns the mode and a
   `PaywallOfferingLookup` into a `PaywallChoice`; everything that stops a RevenueCat paywall from
   being shown falls back to the app's own. Held in `SubscriptionUI` so that an app can keep the
   setting without linking RevenueCatUI.
