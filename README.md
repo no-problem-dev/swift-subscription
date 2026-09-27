@@ -23,6 +23,8 @@ answer current as renewals and expiries arrive.
 - An `AsyncStream` of entitlement changes, including ones the app did not cause
 - A separate `SubscriptionUI` product with a paywall skeleton that keeps the billed amount the
   most prominent price on screen
+- A separate `SubscriptionRevenueCatUI` product that shows a paywall built with RevenueCat
+  Paywalls, and switches between it and the app's own from one place
 - Sendable throughout, with an actor holding the state
 
 ## Usage
@@ -82,6 +84,54 @@ that will be billed is the largest text in every plan row and there is no parame
 change that, which is App Store Review 3.1.2(c) enforced by construction rather than by
 documentation.
 
+### Switching to a RevenueCat paywall
+
+`SubscriptionRevenueCatUI` is the only product that links RevenueCatUI. It shows a paywall
+designed in the RevenueCat dashboard, and `PaywallContainer` chooses between that and the app's
+own paywall according to a `PaywallMode`:
+
+| `PaywallMode` | What is shown |
+|---|---|
+| `.custom` | Always the app's own paywall. RevenueCat is not asked anything |
+| `.revenueCat(offering:)` | The RevenueCat paywall for the offering (`nil` for the current one) |
+| `.automatic(offering:)` | The RevenueCat paywall if the offering has one attached in the dashboard, the app's own otherwise |
+
+Whatever stops a RevenueCat paywall from being shown — no `SubscriptionUseCase` in the
+environment, the SDK not configured, the offerings failing to load, an offering that is not
+there — ends at the app's own paywall.
+
+```swift
+import SubscriptionRevenueCatUI
+import SubscriptionUI
+
+PaywallContainer(
+    mode: .automatic,
+    onEntitled: { analytics.track(.purchaseCompleted) }
+) { handlers in
+    NavigationStack {
+        PaywallView(
+            pages: pages,
+            links: links,
+            onEntitled: handlers.onEntitled,
+            onError: handlers.onError
+        )
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("Close", action: handlers.onDismiss)
+            }
+        }
+    }
+}
+```
+
+The container adds no chrome to either paywall. The RevenueCat paywall draws its own close
+button, so the navigation bar and the close button go inside the `custom` closure, and the
+container is presented bare. `onEntitled`, `onError` and `onDismiss` are called for both
+paywalls; the app's own gets them as the `PaywallHandlers` passed to the closure.
+
+`PaywallMode` and the rule that turns it into a choice (`PaywallMode.choice(for:)`) live in
+`SubscriptionUI`, so an app can hold the setting without linking RevenueCatUI.
+
 ## Documentation
 
 **[API documentation and Getting Started](https://no-problem-dev.github.io/swift-subscription/documentation/subscription/)**
@@ -94,7 +144,7 @@ cannot be tested on a simulator.
 
 - iOS 17.0+ / macOS 14.0+
 - Swift 6.0+
-- [RevenueCat SDK](https://github.com/RevenueCat/purchases-ios) 5.14.0+
+- [RevenueCat SDK](https://github.com/RevenueCat/purchases-ios) 5.19.0+
 
 ## Installation
 

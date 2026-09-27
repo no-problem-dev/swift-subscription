@@ -20,11 +20,18 @@ let package = Package(
         .library(
             name: "SubscriptionUI",
             targets: ["SubscriptionUI"]
+        ),
+        // Paywalls built in the RevenueCat dashboard, and the container that chooses between one
+        // of those and the app's own. The only product that links RevenueCatUI, so an app that
+        // draws its own paywall does not carry it.
+        .library(
+            name: "SubscriptionRevenueCatUI",
+            targets: ["SubscriptionRevenueCatUI"]
         )
     ],
     dependencies: [
         // RevenueCat SDK
-        .package(url: "https://github.com/RevenueCat/purchases-ios.git", from: "5.14.0"),
+        .package(url: "https://github.com/RevenueCat/purchases-ios.git", from: "5.19.0"),
         .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.0")
     ],
     targets: [
@@ -42,6 +49,16 @@ let package = Package(
             dependencies: ["Subscription"],
             path: "Sources/SubscriptionUI"
         ),
+        .target(
+            name: "SubscriptionRevenueCatUI",
+            dependencies: [
+                "Subscription",
+                "SubscriptionUI",
+                .product(name: "RevenueCat", package: "purchases-ios"),
+                .product(name: "RevenueCatUI", package: "purchases-ios")
+            ],
+            path: "Sources/SubscriptionRevenueCatUI"
+        ),
         .testTarget(
             name: "SubscriptionTests",
             dependencies: ["Subscription"],
@@ -51,6 +68,14 @@ let package = Package(
             name: "SubscriptionUITests",
             dependencies: ["SubscriptionUI"],
             path: "Tests/SubscriptionUITests"
+        ),
+        .testTarget(
+            name: "SubscriptionRevenueCatUITests",
+            dependencies: [
+                "SubscriptionRevenueCatUI",
+                .product(name: "RevenueCat", package: "purchases-ios")
+            ],
+            path: "Tests/SubscriptionRevenueCatUITests"
         )
     ]
 )

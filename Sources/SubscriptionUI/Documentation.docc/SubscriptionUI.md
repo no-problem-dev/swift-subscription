@@ -71,6 +71,17 @@ through something of its own. ``PaywallPlanPicker``, ``PaywallPlanRow`` and
 ``PaywallLegalFooter`` are public for the same reason: an app that draws its own paywall can
 still take the parts that are not design decisions.
 
+### Choosing between this paywall and a RevenueCat one
+
+``PaywallMode`` says which paywall the app wants: its own, one built with RevenueCat Paywalls,
+or the RevenueCat one only when the offering has one attached in the dashboard.
+``PaywallMode/choice(for:)`` turns that and what the lookup of the offering found into a
+``PaywallChoice``, and anything that stops the RevenueCat paywall from being shown ends at the
+app's own. The setting lives here so that an app can hold it without linking RevenueCatUI;
+showing the RevenueCat paywall, and the container that switches between the two, are in the
+`SubscriptionRevenueCatUI` product. That container hands the app's paywall a
+``PaywallHandlers`` so both report in the same three callbacks.
+
 ## Topics
 
 ### The paywall
@@ -88,6 +99,13 @@ still take the parts that are not design decisions.
 
 - ``PaywallLegalLinks``
 - ``PaywallLabels``
+
+### Switching paywalls
+
+- ``PaywallMode``
+- ``PaywallOfferingLookup``
+- ``PaywallChoice``
+- ``PaywallHandlers``
 
 ### Previews
 

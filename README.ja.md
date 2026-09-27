@@ -19,6 +19,8 @@ RevenueCat を使ったサブスクリプションとアプリ内課金を、小
   どちらの答えかは値そのものが持つ（規約ではなく型で分かる）
 - 購入・復元・ユーザー同期
 - 権利の変化を流す `AsyncStream`（アプリが起こしていない変化も届く）
+- RevenueCat Paywalls で作ったペイウォールは別プロダクト `SubscriptionRevenueCatUI`。
+  自前のペイウォールとの切り替えを一か所で行える
 - ペイウォールの骨格は別プロダクト `SubscriptionUI`。請求される実額が常に主表示
 - 全体が Sendable。状態は actor が持つ
 
@@ -76,6 +78,55 @@ PaywallView(
 復元ボタンと 2 本の法的リンクを持つ。**請求される実額が各行で最も大きい文字**で、
 それを変える引数は無い —— 審査 3.1.2(c) を規約ではなく構造で守る。
 
+### RevenueCat のペイウォールに切り替える
+
+RevenueCatUI に依存するのは `SubscriptionRevenueCatUI` だけ。RevenueCat のダッシュボードで
+作ったペイウォールを出し、`PaywallContainer` が `PaywallMode` に従って自前のペイウォールと
+どちらを出すかを決める。
+
+| `PaywallMode` | 出るもの |
+|---|---|
+| `.custom` | 常に自前。RevenueCat には何も問い合わせない |
+| `.revenueCat(offering:)` | その offering の RevenueCat ペイウォール（`nil` なら current） |
+| `.automatic(offering:)` | offering にダッシュボードでペイウォールが付いていれば RevenueCat、無ければ自前 |
+
+RevenueCat のペイウォールを出せない理由があるとき —— 環境に `SubscriptionUseCase` が無い、
+SDK が設定されていない、offering の読み込みに失敗した、指定した offering が無い —— は
+自前のペイウォールを出す。
+
+```swift
+import SubscriptionRevenueCatUI
+import SubscriptionUI
+
+PaywallContainer(
+    mode: .automatic,
+    onEntitled: { analytics.track(.purchaseCompleted) }
+) { handlers in
+    NavigationStack {
+        PaywallView(
+            pages: pages,
+            links: links,
+            onEntitled: handlers.onEntitled,
+            onError: handlers.onError
+        )
+        .toolbar {
+            ToolbarItem(placement: .cancellationAction) {
+                Button("閉じる", action: handlers.onDismiss)
+            }
+        }
+    }
+}
+```
+
+コンテナはどちらのペイウォールにも枠（ナビゲーションバーや閉じるボタン）を付けない。
+RevenueCat のペイウォールは閉じるボタンを自分で描くので、ナビゲーションバーと閉じるボタンは
+`custom` のクロージャの中に入れ、コンテナ自体はそのままシートに載せる。
+`onEntitled` / `onError` / `onDismiss` はどちらのペイウォールでも呼ばれる。自前のほうには
+クロージャに渡る `PaywallHandlers` として届く。
+
+`PaywallMode` と、それをどちらを出すかに変える規則（`PaywallMode.choice(for:)`）は
+`SubscriptionUI` にある。RevenueCatUI をリンクしないアプリでも設定値として持てる。
+
 ## ドキュメント
 
 **[API ドキュメントと Getting Started](https://no-problem-dev.github.io/swift-subscription/documentation/subscription/)**
@@ -88,7 +139,7 @@ Getting Started に、前提となる App Store Connect / RevenueCat ダッシ�
 
 - iOS 17.0+ / macOS 14.0+
 - Swift 6.0+
-- [RevenueCat SDK](https://github.com/RevenueCat/purchases-ios) 5.14.0+
+- [RevenueCat SDK](https://github.com/RevenueCat/purchases-ios) 5.19.0+
 
 ## インストール
 
