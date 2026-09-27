@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-09-27
+
 ### Added
 - A `SubscriptionRevenueCatUI` product, the only one that links RevenueCatUI. It carries
   `RevenueCatPaywallView`, which shows a paywall designed with RevenueCat Paywalls for an
