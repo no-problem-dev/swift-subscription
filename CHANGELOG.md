@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-09-30
+
 ### Added
 - Introductory offers. `SubscriptionPackage.introductoryOffer` is an `IntroductoryOffer`: how it
   is paid (`.freeTrial`, `.payAsYouGo`, `.payUpFront`), one period and how many, the price, and
