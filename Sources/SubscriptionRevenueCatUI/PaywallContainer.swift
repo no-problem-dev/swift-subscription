@@ -14,8 +14,11 @@ import SwiftUI
 ///         PaywallView(
 ///             pages: pages,
 ///             links: links,
+///             offering: handlers.offeringIdentifier,
 ///             onEntitled: handlers.onEntitled,
-///             onError: handlers.onError
+///             onError: handlers.onError,
+///             onPending: handlers.onPending,
+///             onNothingToRestore: handlers.onNothingToRestore
 ///         )
 ///         .toolbar {
 ///             ToolbarItem(placement: .cancellationAction) {
@@ -36,9 +39,12 @@ import SwiftUI
 ///
 /// ## One set of callbacks
 ///
-/// `onEntitled`, `onError` and `onDismiss` are called for both paywalls. The RevenueCat one is
-/// wired to them here; the app's own gets them as the ``PaywallHandlers`` passed to `custom`,
-/// to hand on to `PaywallView` and to its close button.
+/// `onEntitled`, `onError`, `onDismiss`, `onPending` and `onNothingToRestore` are called for
+/// both paywalls. The RevenueCat one is wired to them here; the app's own gets them as the
+/// ``PaywallHandlers`` passed to `custom`, to hand on to `PaywallView` and to its close button.
+///
+/// The handlers also carry the mode's offering identifier. Passing it to `PaywallView` keeps
+/// the fallback selling the offering the mode named, not the current one.
 ///
 /// ## Falling back
 ///
@@ -61,6 +67,8 @@ public struct PaywallContainer<Custom: View>: View {
     private let onEntitled: (@MainActor () -> Void)?
     private let onError: (@MainActor (any Error) -> Void)?
     private let onDismiss: (@MainActor () -> Void)?
+    private let onPending: (@MainActor () -> Void)?
+    private let onNothingToRestore: (@MainActor () -> Void)?
     private let custom: (PaywallHandlers) -> Custom
 
     @State private var phase: Phase
@@ -76,18 +84,25 @@ public struct PaywallContainer<Custom: View>: View {
     ///     to the app's paywall instead.
     ///   - onDismiss: Run when the customer asks to close either paywall. `nil` dismisses the
     ///     presentation the container is in.
+    ///   - onPending: Run when a purchase waits for approval (Ask to Buy), on either paywall.
+    ///     `nil` reports `SubscriptionError.purchasePending` to `onError` instead.
+    ///   - onNothingToRestore: Run when a restore finds nothing, on either paywall.
     ///   - custom: Builds the app's own paywall, chrome included, from the handlers to call.
     public init(
         mode: PaywallMode,
         onEntitled: (@MainActor () -> Void)? = nil,
         onError: (@MainActor (any Error) -> Void)? = nil,
         onDismiss: (@MainActor () -> Void)? = nil,
+        onPending: (@MainActor () -> Void)? = nil,
+        onNothingToRestore: (@MainActor () -> Void)? = nil,
         @ViewBuilder custom: @escaping (PaywallHandlers) -> Custom
     ) {
         self.mode = mode
         self.onEntitled = onEntitled
         self.onError = onError
         self.onDismiss = onDismiss
+        self.onPending = onPending
+        self.onNothingToRestore = onNothingToRestore
         self.custom = custom
         self._phase = State(initialValue: mode.needsLookup ? .deciding : .custom)
     }
@@ -115,7 +130,10 @@ public struct PaywallContainer<Custom: View>: View {
         PaywallHandlers(
             onEntitled: { onEntitled?() },
             onError: { onError?($0) },
-            onDismiss: { if let onDismiss { onDismiss() } else { dismiss() } }
+            onDismiss: { if let onDismiss { onDismiss() } else { dismiss() } },
+            onPending: onPending,
+            onNothingToRestore: onNothingToRestore,
+            offeringIdentifier: mode.offeringIdentifier
         )
     }
 

@@ -16,6 +16,8 @@ import Subscription
 /// - `SubscriptionPackage.pricePerMonth` is rendered at caption size, in secondary colour,
 ///   with ``PaywallLabels/perMonthSuffix`` attached — and only when the store supplied one,
 ///   which it does only for annual packages.
+/// - A free trial is a caption line under the title, from ``PaywallLabels/freeTrial``, and only
+///   when the customer is eligible for it. The price stays the amount charged when it ends.
 /// - There is no parameter for a font, a size, or an alternative headline. An app that wants a
 ///   different arrangement has to write its own row, at which point it is making the choice
 ///   deliberately rather than inheriting a rejection.
@@ -61,6 +63,13 @@ public struct PaywallPlanRow: View {
                     if let badge {
                         BadgeLabel(text: badge)
                     }
+                }
+
+                // Only for someone the store will give the trial to. Anyone else is charged the
+                // price on the right today.
+                if let offer = package.introductoryOffer, offer.isEligibleFreeTrial {
+                    Text(labels.freeTrial(offer.duration))
+                        .font(.caption.weight(.semibold))
                 }
 
                 // The derived figure, never the headline.

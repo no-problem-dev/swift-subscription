@@ -2,9 +2,10 @@ import Foundation
 
 /// A failure raised by a subscription operation.
 ///
-/// Only ``purchaseCancelled`` is an ordinary outcome; the rest are genuine failures. Match
-/// that case before any generic error handling, because presenting it as an error tells a
-/// customer that something broke when they simply changed their mind.
+/// ``purchaseCancelled`` and ``purchasePending`` are ordinary outcomes; the rest are genuine
+/// failures. Match those two before any generic error handling, because presenting either as an
+/// error tells a customer that something broke when they simply changed their mind, or are
+/// waiting for a parent to approve.
 ///
 /// ## Example
 /// ```swift
@@ -12,6 +13,8 @@ import Foundation
 ///     let status = try await subscriptionUseCase.purchase(packageId: "annual")
 /// } catch SubscriptionError.purchaseCancelled {
 ///     // Expected. Dismiss quietly.
+/// } catch SubscriptionError.purchasePending {
+///     // Ask to Buy. Say it is waiting for approval; the entitlement arrives later.
 /// } catch {
 ///     showAlert(message: error.localizedDescription)
 /// }
@@ -32,6 +35,14 @@ public enum SubscriptionError: Error, LocalizedError {
     /// The customer dismissed the purchase sheet. Expected, and not an error to display.
     case purchaseCancelled
 
+    /// The purchase is waiting for someone else's approval — Ask to Buy, or a bank's strong
+    /// customer authentication. Expected, and not an error to display.
+    ///
+    /// Nothing is charged yet and the customer is not entitled yet. If the purchase is approved
+    /// later, the entitlement arrives through
+    /// ``SubscriptionUseCase/observeSubscriptionStatus()`` without the app asking again.
+    case purchasePending
+
     /// The purchase failed to complete, wrapping the store's reason.
     ///
     /// Covers a declined payment and an interrupted transaction alike. The entitlement is
@@ -44,11 +55,11 @@ public enum SubscriptionError: Error, LocalizedError {
     /// rather than throwing.
     case restoreFailed(Error)
 
-    /// No package in the current offering has the requested identifier.
+    /// No package in the offering has the requested identifier, or there is no such offering.
     ///
     /// Usually an App Store product identifier passed where the offering's package
     /// identifier was expected, or a paywall built against an offering that is no longer
-    /// current.
+    /// current. The associated value is the package identifier.
     case packageNotFound(String)
 
     /// Attaching or detaching the billing identity failed, leaving purchases attributed to
@@ -68,6 +79,8 @@ public enum SubscriptionError: Error, LocalizedError {
             return "Network error: \(error.localizedDescription)"
         case .purchaseCancelled:
             return "The purchase was cancelled."
+        case .purchasePending:
+            return "The purchase is waiting for approval."
         case .purchaseFailed(let error):
             return "The purchase failed: \(error.localizedDescription)"
         case .restoreFailed(let error):

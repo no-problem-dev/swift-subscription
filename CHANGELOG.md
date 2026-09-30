@@ -7,6 +7,52 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Introductory offers. `SubscriptionPackage.introductoryOffer` is an `IntroductoryOffer`: how it
+  is paid (`.freeTrial`, `.payAsYouGo`, `.payUpFront`), one period and how many, the price, and
+  whether this customer can take it (`.eligible`, `.ineligible`, `.unknown`). The eligibility is
+  asked of the store when the offering loads, and only for packages that have an offer.
+  `isEligibleFreeTrial` is the one question a paywall asks before writing "7 days free", and
+  `regularBillingDate(from:in:)` is the date the regular price is first charged, counted in
+  calendar units. Anything the store did not answer "eligible" is not eligible, so a customer
+  who has used the trial is never promised it.
+- `PaywallPlanRow` shows a free trial as a caption under the plan title, from the new
+  `PaywallLabels.freeTrial`, only when the customer is eligible. The price stays the largest text.
+- Choosing an offering by identifier. `SubscriptionUseCase.loadOffering(id:)` and
+  `purchase(packageId:inOffering:)`; `PaywallView(offering:)` loads and sells from that offering.
+  An identifier the dashboard does not have finds nothing — the current offering is never sold in
+  its place. Both calls have default implementations that answer from `loadOfferings()` and
+  `purchase(packageId:)`, correct for a conformance that knows a single offering, so existing
+  stand-ins compile unchanged.
+- `PaywallHandlers.offeringIdentifier`, set by `PaywallContainer` from its mode. Passing it to
+  `PaywallView` keeps the fallback to the app's own paywall selling the offering the mode named.
+  Until now the fallback always sold the current offering.
+- `SubscriptionError.purchasePending`: a purchase waiting for approval (Ask to Buy). Until now it
+  arrived as `.purchaseFailed`.
+- `onPending` and `onNothingToRestore` on `PaywallView`, `RevenueCatPaywallView`,
+  `PaywallContainer` and `PaywallHandlers`. With no `onPending`, a pending purchase goes to
+  `onError` as `.purchasePending`, so it is never silent. A restore that finds nothing still does
+  not call `onEntitled`.
+- `CachedEntitlement.lastKnownStatus(gracePeriod:at:)` is public, so a widget or another
+  extension reading the app's `EntitlementCache` applies the same grace rule as the app.
+- `PaywallLabels.japanese`, and `PaywallLabels.englishFreeTrial` / `japaneseFreeTrial` for apps
+  that assemble their own labels.
+
+### Changed
+- **BREAKING.** `SubscriptionError` has a new case, `.purchasePending`. A `switch` over it with no
+  `default` stops compiling. `catch` patterns are unaffected.
+- **BREAKING.** New parameters, all defaulted, on `SubscriptionPackage.init`, `PaywallLabels.init`,
+  `PaywallHandlers.init`, both `PaywallView` initialisers, `RevenueCatPaywallView.init` and
+  `PaywallContainer.init`. Call sites keep compiling; the signatures changed.
+
+### Migrating from 2.x
+- Raise the requirement to `from: "3.0.0"`. No call site needs to change unless it switches over
+  `SubscriptionError` exhaustively; add `.purchasePending` there, as an outcome, not an error.
+- A pending purchase used to reach `onError` as `.purchaseFailed`; it now reaches `onPending`, or
+  `onError` as `.purchasePending` when there is none.
+- To sell the offering a `PaywallContainer` mode names from the app's own paywall too, pass
+  `offering: handlers.offeringIdentifier` to `PaywallView`.
+
 ## [2.1.0] - 2026-09-27
 
 ### Added

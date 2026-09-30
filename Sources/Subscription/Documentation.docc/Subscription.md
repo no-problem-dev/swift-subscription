@@ -77,6 +77,7 @@ sandbox account.
 - ``SubscriptionOffering``
 - ``SubscriptionPackage``
 - ``PackageDuration``
+- ``IntroductoryOffer``
 
 ### SwiftUI integration
 

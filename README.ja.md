@@ -78,6 +78,15 @@ PaywallView(
 復元ボタンと 2 本の法的リンクを持つ。**請求される実額が各行で最も大きい文字**で、
 それを変える引数は無い —— 審査 3.1.2(c) を規約ではなく構造で守る。
 
+- 無料トライアルは、トライアルを使える人にだけプランの下に小さく出す（`SubscriptionPackage.introductoryOffer`。
+  期間・対象かどうか・通常の額を最初に請求する日は `IntroductoryOffer` が持つ）
+- `offering:` に ID を渡すと current でなくその offering を売る（`SubscriptionUseCase.loadOffering(id:)`・
+  `purchase(packageId:inOffering:)`）
+- `onPending` は承認待ち（Ask to Buy）、`onNothingToRestore` は復元するものが無かったときに呼ばれる
+- 日本語の文言は `labels: .japanese`
+- ウィジェットなど use case の無いプロセスは、同じ `EntitlementCache` を読んで
+  `CachedEntitlement.lastKnownStatus(gracePeriod:at:)` でアプリと同じ判定をする
+
 ### RevenueCat のペイウォールに切り替える
 
 RevenueCatUI に依存するのは `SubscriptionRevenueCatUI` だけ。RevenueCat のダッシュボードで
@@ -106,8 +115,11 @@ PaywallContainer(
         PaywallView(
             pages: pages,
             links: links,
+            offering: handlers.offeringIdentifier,
             onEntitled: handlers.onEntitled,
-            onError: handlers.onError
+            onError: handlers.onError,
+            onPending: handlers.onPending,
+            onNothingToRestore: handlers.onNothingToRestore
         )
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -121,8 +133,9 @@ PaywallContainer(
 コンテナはどちらのペイウォールにも枠（ナビゲーションバーや閉じるボタン）を付けない。
 RevenueCat のペイウォールは閉じるボタンを自分で描くので、ナビゲーションバーと閉じるボタンは
 `custom` のクロージャの中に入れ、コンテナ自体はそのままシートに載せる。
-`onEntitled` / `onError` / `onDismiss` はどちらのペイウォールでも呼ばれる。自前のほうには
-クロージャに渡る `PaywallHandlers` として届く。
+`onEntitled` / `onError` / `onDismiss` / `onPending` / `onNothingToRestore` はどちらのペイウォールでも
+呼ばれる。自前のほうにはクロージャに渡る `PaywallHandlers` として届く。`handlers.offeringIdentifier` を
+`PaywallView` に渡すと、自前に落ちたときも mode が指した offering を売る。
 
 `PaywallMode` と、それをどちらを出すかに変える規則（`PaywallMode.choice(for:)`）は
 `SubscriptionUI` にある。RevenueCatUI をリンクしないアプリでも設定値として持てる。

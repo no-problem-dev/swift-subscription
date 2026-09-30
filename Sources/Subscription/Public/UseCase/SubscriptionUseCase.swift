@@ -71,6 +71,25 @@ public protocol SubscriptionUseCase: Sendable {
     /// - Throws: ``SubscriptionError/networkError(_:)`` if the products cannot be fetched.
     func loadOfferings() async throws -> SubscriptionOffering?
 
+    /// Fetches the offering with a dashboard identifier, whether or not it is the current one.
+    ///
+    /// For a paywall that sells a particular set of products — a different offering per entry
+    /// point, or one an experiment assigns — rather than whatever the dashboard marks current.
+    /// Buy from it with ``purchase(packageId:inOffering:)``: the same package identifier can
+    /// name a different product in the current offering.
+    ///
+    /// Each package carries its ``SubscriptionPackage/introductoryOffer`` with this customer's
+    /// eligibility already asked, as ``loadOfferings()``'s do.
+    ///
+    /// The default implementation answers from ``loadOfferings()`` and finds the offering only
+    /// when it is the current one, which is right for a conformance that knows a single offering.
+    ///
+    /// - Parameter id: The offering's dashboard identifier.
+    /// - Returns: The offering, or `nil` when the dashboard has none by that identifier. It
+    ///   never answers with the current offering instead.
+    /// - Throws: ``SubscriptionError/networkError(_:)`` if the products cannot be fetched.
+    func loadOffering(id: String) async throws -> SubscriptionOffering?
+
     /// Presents the system purchase sheet for one package and refreshes the cache on success.
     ///
     /// - Parameter packageId: A ``SubscriptionPackage/id`` from ``loadOfferings()``. This is
@@ -79,15 +98,35 @@ public protocol SubscriptionUseCase: Sendable {
     /// - Returns: The entitlement state after the purchase settles.
     /// - Throws: ``SubscriptionError/purchaseCancelled`` when the customer dismisses the
     ///   sheet. That is an ordinary outcome, not a failure — surfacing it as an error alert
-    ///   is the most common mistake here.
+    ///   is the most common mistake here. ``SubscriptionError/purchasePending`` when the
+    ///   purchase waits for approval (Ask to Buy); also an ordinary outcome.
     func purchase(packageId: String) async throws -> SubscriptionStatus
+
+    /// Presents the system purchase sheet for a package of a named offering and refreshes the
+    /// cache on success.
+    ///
+    /// The counterpart of ``loadOffering(id:)``. ``purchase(packageId:)`` looks the package up
+    /// in the current offering, which sells the wrong product when the paywall was built from
+    /// another one that uses the same package identifier.
+    ///
+    /// The default implementation checks the package is in ``loadOffering(id:)`` and then calls
+    /// ``purchase(packageId:)``.
+    ///
+    /// - Parameters:
+    ///   - packageId: A ``SubscriptionPackage/id`` from ``loadOffering(id:)``.
+    ///   - offeringId: The ``SubscriptionOffering/id`` it came from.
+    /// - Returns: The entitlement state after the purchase settles.
+    /// - Throws: As ``purchase(packageId:)``, and ``SubscriptionError/packageNotFound(_:)`` when
+    ///   the offering or the package in it is not there.
+    func purchase(packageId: String, inOffering offeringId: String) async throws -> SubscriptionStatus
 
     /// Re-applies purchases already tied to the signed-in Apple Account.
     ///
     /// Returning normally is not evidence of an entitlement: when there is nothing to
     /// restore this succeeds and returns `.inactive`. Branch on the returned
     /// ``SubscriptionStatus/isActive``, not on the absence of a thrown error, or a customer
-    /// who never subscribed will be told their purchases were restored.
+    /// who never subscribed will be told their purchases were restored. An inactive result is
+    /// the "nothing to restore" to tell them about.
     ///
     /// - Returns: The entitlement state after the restore.
     /// - Throws: ``SubscriptionError/restoreFailed(_:)`` if the store rejects the request.
@@ -122,4 +161,19 @@ public protocol SubscriptionUseCase: Sendable {
     ///
     /// - Throws: ``SubscriptionError/userSyncFailed(_:)`` if sign-out is rejected.
     func clearUser() async throws
+}
+
+public extension SubscriptionUseCase {
+    func loadOffering(id: String) async throws -> SubscriptionOffering? {
+        guard let current = try await loadOfferings(), current.id == id else { return nil }
+        return current
+    }
+
+    func purchase(packageId: String, inOffering offeringId: String) async throws -> SubscriptionStatus {
+        guard let offering = try await loadOffering(id: offeringId),
+              offering.packages.contains(where: { $0.id == packageId }) else {
+            throw SubscriptionError.packageNotFound(packageId)
+        }
+        return try await purchase(packageId: packageId)
+    }
 }

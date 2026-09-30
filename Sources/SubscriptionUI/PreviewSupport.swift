@@ -16,7 +16,13 @@ public extension SubscriptionOffering {
                     description: "12 months",
                     price: "¥6,000",
                     pricePerMonth: "¥500",
-                    duration: .annual
+                    duration: .annual,
+                    introductoryOffer: IntroductoryOffer(
+                        paymentMode: .freeTrial,
+                        period: IntroductoryOffer.Period(value: 7, unit: .day),
+                        price: "¥0",
+                        eligibility: .eligible
+                    )
                 ),
                 SubscriptionPackage(
                     id: "monthly",

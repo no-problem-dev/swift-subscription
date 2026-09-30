@@ -48,6 +48,13 @@ public struct SubscriptionPackage: Sendable, Identifiable {
     /// How long the purchase lasts.
     public let duration: PackageDuration
 
+    /// The introductory offer on this product, such as a free trial, with whether this customer
+    /// can still take it. `nil` when the product has none.
+    ///
+    /// Check ``IntroductoryOffer/eligibility`` before showing it: a customer who has used the
+    /// offer before is charged ``price`` on day one.
+    public let introductoryOffer: IntroductoryOffer?
+
     /// Creates a package.
     ///
     /// Provided for tests, previews, and paywall mock-ups; real values come from
@@ -60,13 +67,15 @@ public struct SubscriptionPackage: Sendable, Identifiable {
     ///   - price: The price, pre-formatted for the customer's storefront.
     ///   - pricePerMonth: The monthly equivalent for annual packages; `nil` otherwise.
     ///   - duration: How long the purchase lasts.
+    ///   - introductoryOffer: The introductory offer, such as a free trial; `nil` for none.
     public init(
         id: String,
         title: String,
         description: String,
         price: String,
         pricePerMonth: String?,
-        duration: PackageDuration
+        duration: PackageDuration,
+        introductoryOffer: IntroductoryOffer? = nil
     ) {
         self.id = id
         self.title = title
@@ -74,13 +83,15 @@ public struct SubscriptionPackage: Sendable, Identifiable {
         self.price = price
         self.pricePerMonth = pricePerMonth
         self.duration = duration
+        self.introductoryOffer = introductoryOffer
     }
 }
 
 /// The set of products a paywall should show, as chosen in the RevenueCat dashboard.
 ///
 /// Which offering is current is a server-side decision, so the products can change without
-/// an app release. Build the paywall from whatever `packages` contains rather than assuming
+/// an app release. A paywall that needs a particular offering rather than the current one asks
+/// for it by identifier with ``SubscriptionUseCase/loadOffering(id:)``. Build the paywall from whatever `packages` contains rather than assuming
 /// a fixed monthly-and-annual pair.
 public struct SubscriptionOffering: Sendable, Identifiable {
     /// The offering's dashboard identifier, useful for attributing conversions to a paywall

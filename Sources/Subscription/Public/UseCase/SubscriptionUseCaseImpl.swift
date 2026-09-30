@@ -101,11 +101,20 @@ public final class SubscriptionUseCaseImpl: SubscriptionUseCase {
     }
 
     public func loadOfferings() async throws -> SubscriptionOffering? {
-        try await repository.loadOfferings()
+        try await repository.loadOffering(id: nil)
+    }
+
+    public func loadOffering(id: String) async throws -> SubscriptionOffering? {
+        try await repository.loadOffering(id: id)
     }
 
     public func purchase(packageId: String) async throws -> SubscriptionStatus {
-        let status = try await repository.purchase(packageId: packageId)
+        let status = try await repository.purchase(packageId: packageId, offeringId: nil)
+        return await state.confirm(status, at: now())
+    }
+
+    public func purchase(packageId: String, inOffering offeringId: String) async throws -> SubscriptionStatus {
+        let status = try await repository.purchase(packageId: packageId, offeringId: offeringId)
         return await state.confirm(status, at: now())
     }
 

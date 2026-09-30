@@ -12,6 +12,8 @@ actor SubscriptionRepositoryMock: SubscriptionRepository {
     private var checkStatusError: Error?
     private(set) var syncedUserIds: [String] = []
     private(set) var clearUserCallCount = 0
+    private(set) var loadedOfferingIds: [String?] = []
+    private(set) var purchasedFrom: [String?] = []
 
     /// Pushes a status into the stream, standing in for a change the store would push.
     nonisolated let changesContinuation: AsyncStream<SubscriptionStatus>.Continuation
@@ -49,13 +51,15 @@ actor SubscriptionRepositoryMock: SubscriptionRepository {
         return statusToReturn
     }
 
-    func loadOfferings() async throws -> SubscriptionOffering? {
+    func loadOffering(id: String?) async throws -> SubscriptionOffering? {
         try throwIfNeeded()
+        loadedOfferingIds.append(id)
         return offeringToReturn
     }
 
-    func purchase(packageId: String) async throws -> SubscriptionStatus {
+    func purchase(packageId: String, offeringId: String?) async throws -> SubscriptionStatus {
         try throwIfNeeded()
+        purchasedFrom.append(offeringId)
         return statusToReturn
     }
 

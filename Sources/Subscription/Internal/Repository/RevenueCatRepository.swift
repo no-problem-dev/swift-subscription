@@ -41,43 +41,58 @@ final class RevenueCatRepository: SubscriptionRepository {
         }
     }
 
-    func loadOfferings() async throws -> SubscriptionOffering? {
+    func loadOffering(id: String?) async throws -> SubscriptionOffering? {
         guard isConfigured else {
             throw SubscriptionError.notConfigured
         }
 
+        let offering: Offering?
         do {
-            let offerings = try await Purchases.shared.offerings()
-            guard let currentOffering = offerings.current else {
-                return nil
-            }
-
-            let packages = currentOffering.availablePackages.map { package in
-                SubscriptionPackage(
-                    id: package.identifier,
-                    title: package.storeProduct.localizedTitle,
-                    description: package.storeProduct.localizedDescription,
-                    price: package.storeProduct.localizedPriceString,
-                    pricePerMonth: calculateMonthlyPrice(for: package),
-                    duration: convertDuration(for: package.packageType)
-                )
-            }
-
-            return SubscriptionOffering(id: currentOffering.identifier, packages: packages)
+            offering = Self.offering(id, in: try await Purchases.shared.offerings())
         } catch {
             throw SubscriptionError.networkError(error)
         }
+        guard let offering else { return nil }
+
+        // Asked only for packages that carry an introductory offer: eligibility is a store
+        // round trip, and the answer means nothing for a product without one.
+        let withOffer = offering.availablePackages.filter { $0.storeProduct.introductoryDiscount != nil }
+        let eligibility = withOffer.isEmpty
+            ? [:]
+            : await Purchases.shared.checkTrialOrIntroDiscountEligibility(packages: withOffer)
+
+        let packages = offering.availablePackages.map { package in
+            SubscriptionPackage(
+                id: package.identifier,
+                title: package.storeProduct.localizedTitle,
+                description: package.storeProduct.localizedDescription,
+                price: package.storeProduct.localizedPriceString,
+                pricePerMonth: calculateMonthlyPrice(for: package),
+                duration: convertDuration(for: package.packageType),
+                introductoryOffer: package.storeProduct.introductoryDiscount.map { discount in
+                    Self.introductoryOffer(
+                        paymentMode: discount.paymentMode,
+                        period: discount.subscriptionPeriod,
+                        periodCount: discount.numberOfPeriods,
+                        price: discount.localizedPriceString,
+                        eligibility: eligibility[package]?.status
+                    )
+                }
+            )
+        }
+
+        return SubscriptionOffering(id: offering.identifier, packages: packages)
     }
 
-    func purchase(packageId: String) async throws -> SubscriptionStatus {
+    func purchase(packageId: String, offeringId: String?) async throws -> SubscriptionStatus {
         guard isConfigured else {
             throw SubscriptionError.notConfigured
         }
 
         do {
             let offerings = try await Purchases.shared.offerings()
-            guard let currentOffering = offerings.current,
-                  let package = currentOffering.availablePackages.first(where: { $0.identifier == packageId }) else {
+            guard let offering = Self.offering(offeringId, in: offerings),
+                  let package = offering.availablePackages.first(where: { $0.identifier == packageId }) else {
                 throw SubscriptionError.packageNotFound(packageId)
             }
 
@@ -91,7 +106,7 @@ final class RevenueCatRepository: SubscriptionRepository {
         } catch let error as SubscriptionError {
             throw error
         } catch {
-            throw SubscriptionError.purchaseFailed(error)
+            throw Self.purchaseError(error)
         }
     }
 
@@ -183,6 +198,69 @@ final class RevenueCatRepository: SubscriptionRepository {
     }
 
     // MARK: - Testable Core
+
+    /// The offering with this identifier, or the current one for `nil`.
+    ///
+    /// An identifier that is not in the dashboard finds nothing. It never falls back to the
+    /// current offering: a paywall asked for one set of products and would be selling another.
+    static func offering(_ identifier: String?, in offerings: Offerings) -> Offering? {
+        guard let identifier else { return offerings.current }
+        return offerings.all[identifier]
+    }
+
+    /// What a purchase that threw means. A deferred purchase — Ask to Buy — is not a failure.
+    static func purchaseError(_ error: any Error) -> SubscriptionError {
+        if let code = error as? ErrorCode, code == .paymentPendingError {
+            return .purchasePending
+        }
+        return .purchaseFailed(error)
+    }
+
+    /// Maps the store's description of an introductory discount onto ``IntroductoryOffer``.
+    ///
+    /// Anything the store did not answer with "eligible" — including no answer at all — is
+    /// reported as ``IntroductoryOffer/Eligibility/unknown`` or ``IntroductoryOffer/Eligibility/ineligible``,
+    /// so a paywall that follows the eligibility never promises a trial the store then refuses.
+    static func introductoryOffer(
+        paymentMode: StoreProductDiscount.PaymentMode,
+        period: RevenueCat.SubscriptionPeriod,
+        periodCount: Int,
+        price: String,
+        eligibility: IntroEligibilityStatus?
+    ) -> IntroductoryOffer {
+        IntroductoryOffer(
+            paymentMode: introductoryPaymentMode(paymentMode),
+            period: IntroductoryOffer.Period(value: period.value, unit: periodUnit(period.unit)),
+            periodCount: periodCount,
+            price: price,
+            eligibility: introductoryEligibility(eligibility)
+        )
+    }
+
+    static func introductoryPaymentMode(_ mode: StoreProductDiscount.PaymentMode) -> IntroductoryOffer.PaymentMode {
+        switch mode {
+        case .freeTrial: return .freeTrial
+        case .payAsYouGo: return .payAsYouGo
+        case .payUpFront: return .payUpFront
+        }
+    }
+
+    static func periodUnit(_ unit: RevenueCat.SubscriptionPeriod.Unit) -> IntroductoryOffer.Period.Unit {
+        switch unit {
+        case .day: return .day
+        case .week: return .week
+        case .month: return .month
+        case .year: return .year
+        }
+    }
+
+    static func introductoryEligibility(_ status: IntroEligibilityStatus?) -> IntroductoryOffer.Eligibility {
+        switch status {
+        case .eligible: return .eligible
+        case .ineligible, .noIntroOfferExists: return .ineligible
+        case .unknown, nil: return .unknown
+        }
+    }
 
     /// The fields of a RevenueCat entitlement this package actually reads.
     ///

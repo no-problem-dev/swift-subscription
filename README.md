@@ -84,6 +84,17 @@ that will be billed is the largest text in every plan row and there is no parame
 change that, which is App Store Review 3.1.2(c) enforced by construction rather than by
 documentation.
 
+- A free trial appears as a caption under the plan, and only for a customer the store will give
+  it to (`SubscriptionPackage.introductoryOffer`; `IntroductoryOffer` carries the length, the
+  eligibility and the date the regular price is first charged).
+- Pass `offering:` to sell an offering by identifier instead of the current one
+  (`SubscriptionUseCase.loadOffering(id:)`, `purchase(packageId:inOffering:)`).
+- `onPending` is called for a purchase waiting for approval (Ask to Buy), `onNothingToRestore`
+  for a restore that finds nothing.
+- `labels: .japanese` for the Japanese wording.
+- A widget, or any process without a use case, reads the same `EntitlementCache` and applies
+  `CachedEntitlement.lastKnownStatus(gracePeriod:at:)` to reach the app's answer.
+
 ### Switching to a RevenueCat paywall
 
 `SubscriptionRevenueCatUI` is the only product that links RevenueCatUI. It shows a paywall
@@ -112,8 +123,11 @@ PaywallContainer(
         PaywallView(
             pages: pages,
             links: links,
+            offering: handlers.offeringIdentifier,
             onEntitled: handlers.onEntitled,
-            onError: handlers.onError
+            onError: handlers.onError,
+            onPending: handlers.onPending,
+            onNothingToRestore: handlers.onNothingToRestore
         )
         .toolbar {
             ToolbarItem(placement: .cancellationAction) {
@@ -126,8 +140,10 @@ PaywallContainer(
 
 The container adds no chrome to either paywall. The RevenueCat paywall draws its own close
 button, so the navigation bar and the close button go inside the `custom` closure, and the
-container is presented bare. `onEntitled`, `onError` and `onDismiss` are called for both
-paywalls; the app's own gets them as the `PaywallHandlers` passed to the closure.
+container is presented bare. `onEntitled`, `onError`, `onDismiss`, `onPending` and
+`onNothingToRestore` are called for both paywalls; the app's own gets them as the
+`PaywallHandlers` passed to the closure. Pass `handlers.offeringIdentifier` on to `PaywallView`
+so that the fallback sells the offering the mode named.
 
 `PaywallMode` and the rule that turns it into a choice (`PaywallMode.choice(for:)`) live in
 `SubscriptionUI`, so an app can hold the setting without linking RevenueCatUI.

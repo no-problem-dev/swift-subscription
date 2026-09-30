@@ -23,7 +23,7 @@ public enum RevenueCatPaywallError: Error, LocalizedError {
 }
 
 /// A paywall designed in the RevenueCat dashboard with RevenueCat Paywalls, reporting in the
-/// same three callbacks as `PaywallView`.
+/// same callbacks as `PaywallView`.
 ///
 /// ```swift
 /// RevenueCatPaywallView(
@@ -37,7 +37,8 @@ public enum RevenueCatPaywallError: Error, LocalizedError {
 /// answer to "is the customer entitled now?", which it takes from the `SubscriptionUseCase` in
 /// the environment rather than from the `CustomerInfo` RevenueCatUI hands back: the use case
 /// knows which entitlement means subscribed, and asking it writes the new reading to the
-/// `EntitlementCache` too. A restore that finds nothing therefore does not call `onEntitled`.
+/// `EntitlementCache` too. A restore that finds nothing therefore calls `onNothingToRestore`,
+/// not `onEntitled`.
 ///
 /// It draws its own chrome. Present it bare in a sheet — not inside a `NavigationStack` with a
 /// close button of your own — and the dashboard's close button calls `onDismiss`.
@@ -60,6 +61,8 @@ public struct RevenueCatPaywallView: View {
     private let onEntitled: (@MainActor () -> Void)?
     private let onError: (@MainActor (any Error) -> Void)?
     private let onDismiss: (@MainActor () -> Void)?
+    private let onPending: (@MainActor () -> Void)?
+    private let onNothingToRestore: (@MainActor () -> Void)?
 
     @State private var phase: Phase
 
@@ -75,18 +78,25 @@ public struct RevenueCatPaywallView: View {
     ///     A cancelled purchase does not arrive here.
     ///   - onDismiss: Run when the paywall's close button is tapped. `nil` dismisses the
     ///     presentation the paywall is in.
+    ///   - onPending: Run when a purchase waits for approval (Ask to Buy). `nil` reports
+    ///     `SubscriptionError.purchasePending` to `onError` instead.
+    ///   - onNothingToRestore: Run when a restore finds nothing that entitles the customer.
     public init(
         offering: String? = nil,
         displayCloseButton: Bool = true,
         onEntitled: (@MainActor () -> Void)? = nil,
         onError: (@MainActor (any Error) -> Void)? = nil,
-        onDismiss: (@MainActor () -> Void)? = nil
+        onDismiss: (@MainActor () -> Void)? = nil,
+        onPending: (@MainActor () -> Void)? = nil,
+        onNothingToRestore: (@MainActor () -> Void)? = nil
     ) {
         self.offeringIdentifier = offering
         self.displayCloseButton = displayCloseButton
         self.onEntitled = onEntitled
         self.onError = onError
         self.onDismiss = onDismiss
+        self.onPending = onPending
+        self.onNothingToRestore = onNothingToRestore
         self._phase = State(initialValue: .loading)
     }
 
@@ -100,6 +110,8 @@ public struct RevenueCatPaywallView: View {
         self.onEntitled = handlers.onEntitled
         self.onError = handlers.onError
         self.onDismiss = handlers.onDismiss
+        self.onPending = handlers.onPending
+        self.onNothingToRestore = handlers.onNothingToRestore
         self._phase = State(initialValue: .loaded(offering))
     }
 
@@ -112,13 +124,13 @@ public struct RevenueCatPaywallView: View {
         case .loaded(let offering):
             PaywallView(offering: offering, displayCloseButton: displayCloseButton)
                 .onPurchaseCompleted { _ in
-                    Task { await settle() }
+                    Task { await settle(afterRestore: false) }
                 }
                 .onRestoreCompleted { _ in
-                    Task { await settle() }
+                    Task { await settle(afterRestore: true) }
                 }
                 .onPurchaseFailure { error in
-                    onError?(SubscriptionError.purchaseFailed(error))
+                    report(RevenueCatPurchaseError.subscriptionError(error))
                 }
                 .onRestoreFailure { error in
                     onError?(SubscriptionError.restoreFailed(error))
@@ -152,6 +164,14 @@ public struct RevenueCatPaywallView: View {
         }
     }
 
+    private func report(_ error: SubscriptionError) {
+        if case .purchasePending = error, let onPending {
+            onPending()
+        } else {
+            onError?(error)
+        }
+    }
+
     private func fail(_ error: any Error) {
         phase = .failed(error)
         onError?(error)
@@ -161,7 +181,7 @@ public struct RevenueCatPaywallView: View {
     /// only the use case knows which entitlement counts. A restore that finds nothing succeeds,
     /// and branching on the success alone would tell someone who never subscribed that they had
     /// been restored.
-    private func settle() async {
+    private func settle(afterRestore: Bool) async {
         guard let subscriptionUseCase else {
             onError?(SubscriptionError.notConfigured)
             return
@@ -169,9 +189,24 @@ public struct RevenueCatPaywallView: View {
 
         do {
             let status = try await subscriptionUseCase.checkSubscriptionStatus()
-            if status.isActive { onEntitled?() }
+            if status.isActive {
+                onEntitled?()
+            } else if afterRestore {
+                onNothingToRestore?()
+            }
         } catch {
             onError?(error)
         }
+    }
+}
+
+/// What a purchase RevenueCatUI reports as failed means.
+enum RevenueCatPurchaseError {
+    /// A deferred purchase — Ask to Buy — is reported by the SDK as a failure; it is not one.
+    static func subscriptionError(_ error: any Error) -> SubscriptionError {
+        if let code = error as? ErrorCode, code == .paymentPendingError {
+            return .purchasePending
+        }
+        return .purchaseFailed(error)
     }
 }

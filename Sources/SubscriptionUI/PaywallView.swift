@@ -27,13 +27,13 @@ import Subscription
 /// ```
 ///
 /// This form reads the `SubscriptionUseCase` out of the environment, loads the current
-/// offering, puts the annual plan first, preselects it, and buys and restores through it. With
+/// offering (or the one named by `offering:`), puts the annual plan first, preselects it, and buys and restores through it. With
 /// nothing injected it renders a configuration error rather than an empty screen, so a missed
 /// injection is visible during development instead of at the till.
 ///
 /// ## Driving it yourself
 ///
-/// ``init(pages:packages:links:labels:purchase:restore:onError:)`` takes the plans and the two
+/// ``init(pages:packages:links:labels:purchase:restore:onError:onPending:)`` takes the plans and the two
 /// actions directly, for an app that owns its own purchase flow and wants the structure without
 /// the wiring.
 public struct PaywallView: View {
@@ -50,10 +50,14 @@ public struct PaywallView: View {
     private let links: PaywallLegalLinks
     private let labels: PaywallLabels
     private let explicit: Explicit?
+    private let offeringIdentifier: String?
     private let onEntitled: (@MainActor () -> Void)?
     private let onError: (@MainActor (any Error) -> Void)?
+    private let onPending: (@MainActor () -> Void)?
+    private let onNothingToRestore: (@MainActor () -> Void)?
 
     @State private var packages: [SubscriptionPackage] = []
+    @State private var loadedOfferingId: String?
     @State private var recommendedPackageId: String?
     @State private var selectedPackageId: String?
     @State private var isWorking = false
@@ -63,24 +67,41 @@ public struct PaywallView: View {
     /// - Parameters:
     ///   - pages: The sales content, one entry per page. Pass more than one to page through.
     ///   - links: The terms of use and the privacy policy.
-    ///   - labels: The words this package puts on screen. English by default.
+    ///   - labels: The words this package puts on screen. English by default;
+    ///     ``PaywallLabels/japanese`` for Japanese.
+    ///   - offering: The dashboard identifier of the offering to sell, or `nil` for the current
+    ///     one. An identifier the dashboard does not have leaves the paywall with nothing to
+    ///     sell rather than selling the current offering in its place.
     ///   - onEntitled: Run when a purchase or a restore leaves the customer entitled — the
     ///     place to dismiss the paywall.
     ///   - onError: Run when a purchase or a restore fails. A cancelled purchase does not
     ///     arrive here: dismissing the sheet is an ordinary outcome, not a failure to report.
+    ///     Neither does a pending one while `onPending` is set.
+    ///   - onPending: Run when a purchase waits for approval (Ask to Buy) — the place to say it
+    ///     was sent for approval. The entitlement arrives later through the use case's stream.
+    ///     `nil` reports `SubscriptionError.purchasePending` to `onError` instead, so the
+    ///     outcome is never silent.
+    ///   - onNothingToRestore: Run when a restore succeeds but finds nothing that entitles the
+    ///     customer — the place to say there was nothing to restore.
     public init(
         pages: [PaywallPage],
         links: PaywallLegalLinks,
         labels: PaywallLabels = PaywallLabels(),
+        offering: String? = nil,
         onEntitled: (@MainActor () -> Void)? = nil,
-        onError: (@MainActor (any Error) -> Void)? = nil
+        onError: (@MainActor (any Error) -> Void)? = nil,
+        onPending: (@MainActor () -> Void)? = nil,
+        onNothingToRestore: (@MainActor () -> Void)? = nil
     ) {
         self.pages = pages
         self.links = links
         self.labels = labels
         self.explicit = nil
+        self.offeringIdentifier = offering
         self.onEntitled = onEntitled
         self.onError = onError
+        self.onPending = onPending
+        self.onNothingToRestore = onNothingToRestore
     }
 
     /// Creates a paywall over plans and actions you supply.
@@ -95,7 +116,9 @@ public struct PaywallView: View {
     ///   - purchase: Run with the selected plan when the purchase button is tapped.
     ///   - restore: Run when restore is tapped.
     ///   - onError: Run when either throws, except for
-    ///     `SubscriptionError.purchaseCancelled`.
+    ///     `SubscriptionError.purchaseCancelled`, and for `SubscriptionError.purchasePending`
+    ///     while `onPending` is set.
+    ///   - onPending: Run when `purchase` throws `SubscriptionError.purchasePending`.
     public init(
         pages: [PaywallPage],
         packages: [SubscriptionPackage],
@@ -103,14 +126,18 @@ public struct PaywallView: View {
         labels: PaywallLabels = PaywallLabels(),
         purchase: @escaping @MainActor (SubscriptionPackage) async throws -> Void,
         restore: @escaping @MainActor () async throws -> Void,
-        onError: (@MainActor (any Error) -> Void)? = nil
+        onError: (@MainActor (any Error) -> Void)? = nil,
+        onPending: (@MainActor () -> Void)? = nil
     ) {
         self.pages = pages
         self.links = links
         self.labels = labels
         self.explicit = Explicit(packages: packages, purchase: purchase, restore: restore)
+        self.offeringIdentifier = nil
         self.onEntitled = nil
         self.onError = onError
+        self.onPending = onPending
+        self.onNothingToRestore = nil
     }
 
     public var body: some View {
@@ -185,11 +212,16 @@ public struct PaywallView: View {
         guard let subscriptionUseCase else { return }
 
         do {
-            let offering = try await subscriptionUseCase.loadOfferings()
+            let offering = if let offeringIdentifier {
+                try await subscriptionUseCase.loadOffering(id: offeringIdentifier)
+            } else {
+                try await subscriptionUseCase.loadOfferings()
+            }
             let ordered = PaywallPlanOrder.annualFirst(offering?.packages ?? [])
             let recommended = PaywallPlanOrder.recommended(in: ordered)
 
             packages = ordered
+            loadedOfferingId = offering?.id
             recommendedPackageId = recommended?.id
             selectedPackageId = selectedPackageId ?? recommended?.id
         } catch {
@@ -207,7 +239,13 @@ public struct PaywallView: View {
             if let explicit {
                 try await explicit.purchase(package)
             } else if let subscriptionUseCase {
-                let status = try await subscriptionUseCase.purchase(packageId: package.id)
+                // A named offering is bought from by name: the same package identifier can be a
+                // different product in the current one.
+                let status = if offeringIdentifier != nil, let loadedOfferingId {
+                    try await subscriptionUseCase.purchase(packageId: package.id, inOffering: loadedOfferingId)
+                } else {
+                    try await subscriptionUseCase.purchase(packageId: package.id)
+                }
                 if status.isActive { onEntitled?() }
             }
         } catch {
@@ -227,7 +265,7 @@ public struct PaywallView: View {
                 // nothing succeeds and reports `.inactive`. Branching on the absence of an
                 // error would tell someone who never subscribed that they had been restored.
                 let status = try await subscriptionUseCase.restorePurchases()
-                if status.isActive { onEntitled?() }
+                if status.isActive { onEntitled?() } else { onNothingToRestore?() }
             }
         } catch {
             report(error)
@@ -238,6 +276,10 @@ public struct PaywallView: View {
         // A dismissed purchase sheet is a normal outcome, not something to put in front of
         // someone as a failure.
         if case SubscriptionError.purchaseCancelled = error { return }
+        if case SubscriptionError.purchasePending = error, let onPending {
+            onPending()
+            return
+        }
         onError?(error)
     }
 }

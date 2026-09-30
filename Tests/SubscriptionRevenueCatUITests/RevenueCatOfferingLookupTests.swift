@@ -76,3 +76,26 @@ struct RevenueCatOfferingLookupTests {
         #expect(RevenueCatOfferingLookup.lookup(for: Self.offering("designed", paywall: Self.paywall)) == .hasPaywall)
     }
 }
+
+@Suite("RevenueCat のペイウォールが失敗として返す購入")
+struct RevenueCatPurchaseErrorTests {
+    @Test("承認待ちは失敗でなく purchasePending")
+    func pendingIsNotAFailure() {
+        let error = RevenueCatPurchaseError.subscriptionError(ErrorCode.paymentPendingError)
+
+        guard case .purchasePending = error else {
+            Issue.record("expected .purchasePending, got \(error)")
+            return
+        }
+    }
+
+    @Test("ほかは purchaseFailed")
+    func otherErrorsAreFailures() {
+        let error = RevenueCatPurchaseError.subscriptionError(ErrorCode.storeProblemError)
+
+        guard case .purchaseFailed = error else {
+            Issue.record("expected .purchaseFailed, got \(error)")
+            return
+        }
+    }
+}

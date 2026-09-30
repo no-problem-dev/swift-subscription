@@ -66,6 +66,12 @@ public struct CachedEntitlement: Sendable, Equatable, Codable {
 
     /// The reading to run on until the store answers again.
     ///
+    /// The rule ``SubscriptionUseCase/getSubscriptionStatus()`` applies to the cache, public so
+    /// that a process without a use case — a widget or another extension reading the same
+    /// ``EntitlementCache`` — reaches the same answer instead of reading ``isActive`` raw and
+    /// either locking a subscriber out at the expiration date or never locking anyone out.
+    /// Pass the ``SubscriptionConfiguration/gracePeriod`` the app configured.
+    ///
     /// An entitlement that has passed its expiration date is honoured for `gracePeriod` beyond
     /// it and then stops: the customer paid up to a date, and the point of the grace is to
     /// survive a renewal this device has not been online to see, not to make a lapsed
@@ -75,7 +81,15 @@ public struct CachedEntitlement: Sendable, Equatable, Codable {
     /// runs its own billing-retry grace, during which it reports an active entitlement whose
     /// expiration date has already passed; clamping that would revoke access the store just
     /// granted.
-    func lastKnownStatus(gracePeriod: TimeInterval, at now: Date) -> SubscriptionStatus {
+    ///
+    /// - Parameters:
+    ///   - gracePeriod: How long past its expiration date the entitlement is honoured.
+    ///   - now: The moment to answer for.
+    /// - Returns: The reading, stamped ``EntitlementVerification/lastKnown(at:)``.
+    public func lastKnownStatus(
+        gracePeriod: TimeInterval = SubscriptionConfiguration.defaultGracePeriod,
+        at now: Date = Date()
+    ) -> SubscriptionStatus {
         let verification = EntitlementVerification.lastKnown(at: confirmedAt)
 
         guard isActive, isWithinGrace(gracePeriod: gracePeriod, at: now) else {

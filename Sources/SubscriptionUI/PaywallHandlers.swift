@@ -1,6 +1,6 @@
 import Foundation
 
-/// The three things a paywall reports, whichever paywall it is.
+/// What a paywall reports, whichever paywall it is, and which offering it was asked to sell.
 ///
 /// `PaywallContainer` hands one of these to the closure that builds the app's own paywall, and
 /// wires the RevenueCat paywall to the same three. Pass them through to ``PaywallView`` and to
@@ -13,8 +13,11 @@ import Foundation
 ///         PaywallView(
 ///             pages: pages,
 ///             links: links,
+///             offering: handlers.offeringIdentifier,
 ///             onEntitled: handlers.onEntitled,
-///             onError: handlers.onError
+///             onError: handlers.onError,
+///             onPending: handlers.onPending,
+///             onNothingToRestore: handlers.onNothingToRestore
 ///         )
 ///         .toolbar {
 ///             ToolbarItem(placement: .cancellationAction) {
@@ -37,19 +40,42 @@ public struct PaywallHandlers {
     /// Call when the customer asks to close the paywall without buying.
     public let onDismiss: @MainActor () -> Void
 
+    /// Call when a purchase is waiting for approval (Ask to Buy). `nil` when the app did not
+    /// ask to hear about it.
+    public let onPending: (@MainActor () -> Void)?
+
+    /// Call when a restore succeeds but finds nothing that entitles the customer. `nil` when
+    /// the app did not ask to hear about it.
+    public let onNothingToRestore: (@MainActor () -> Void)?
+
+    /// The offering the paywall was asked to sell, or `nil` for the current one.
+    ///
+    /// Pass it on to ``PaywallView``, so that the app's own paywall, when it is shown in place
+    /// of a RevenueCat one, sells the same products.
+    public let offeringIdentifier: String?
+
     /// Creates a set of handlers.
     ///
     /// - Parameters:
     ///   - onEntitled: Run when a purchase or a restore leaves the customer entitled.
     ///   - onError: Run when a purchase or a restore fails.
     ///   - onDismiss: Run when the customer asks to close the paywall.
+    ///   - onPending: Run when a purchase waits for approval.
+    ///   - onNothingToRestore: Run when a restore finds nothing.
+    ///   - offeringIdentifier: The offering to sell, or `nil` for the current one.
     public init(
         onEntitled: @escaping @MainActor () -> Void,
         onError: @escaping @MainActor (any Error) -> Void,
-        onDismiss: @escaping @MainActor () -> Void
+        onDismiss: @escaping @MainActor () -> Void,
+        onPending: (@MainActor () -> Void)? = nil,
+        onNothingToRestore: (@MainActor () -> Void)? = nil,
+        offeringIdentifier: String? = nil
     ) {
         self.onEntitled = onEntitled
         self.onError = onError
         self.onDismiss = onDismiss
+        self.onPending = onPending
+        self.onNothingToRestore = onNothingToRestore
+        self.offeringIdentifier = offeringIdentifier
     }
 }

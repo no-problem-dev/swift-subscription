@@ -9,11 +9,13 @@ protocol SubscriptionRepository: Sendable {
     /// Reads the authoritative entitlement state from the store.
     func checkSubscriptionStatus() async throws -> SubscriptionStatus
 
-    /// Fetches the currently marked offering, or `nil` when the dashboard marks none.
-    func loadOfferings() async throws -> SubscriptionOffering?
+    /// Fetches the offering with this identifier, or the current one for `nil`; `nil` when the
+    /// dashboard has no such offering.
+    func loadOffering(id: String?) async throws -> SubscriptionOffering?
 
-    /// Presents the purchase sheet and reports the entitlement once the purchase settles.
-    func purchase(packageId: String) async throws -> SubscriptionStatus
+    /// Presents the purchase sheet for a package of the offering with this identifier (the
+    /// current one for `nil`) and reports the entitlement once the purchase settles.
+    func purchase(packageId: String, offeringId: String?) async throws -> SubscriptionStatus
 
     /// Re-applies purchases on the Apple Account; resolves to `.inactive` when there are none.
     func restorePurchases() async throws -> SubscriptionStatus
