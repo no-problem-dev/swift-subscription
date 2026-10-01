@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Fixed
+- `clearUser()` on an identity that is already anonymous (sign-out after a `syncUser(userId:)`
+  that failed) used to throw `userSyncFailed`, because RevenueCat refuses `logOut()` for an
+  anonymous user, and the entitlement held in memory and in the `EntitlementCache` was left
+  behind. It now skips `logOut()` and forgets the entitlement.
+
 ## [3.1.0] - 2026-10-01
 
 ### Added

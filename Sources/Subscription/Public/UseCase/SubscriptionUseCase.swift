@@ -159,6 +159,9 @@ public protocol SubscriptionUseCase: Sendable {
     /// by whoever signs in next on the same device — and, now that the entitlement outlives the
     /// process, readable on the next launch too.
     ///
+    /// Calling it while the identity is already anonymous (a ``syncUser(userId:)`` that never
+    /// landed) is not an error: the store is left as it is and the entitlement is still forgotten.
+    ///
     /// - Throws: ``SubscriptionError/userSyncFailed(_:)`` if sign-out is rejected.
     func clearUser() async throws
 }

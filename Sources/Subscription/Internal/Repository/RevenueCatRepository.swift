@@ -147,6 +147,8 @@ final class RevenueCatRepository: SubscriptionRepository {
             throw SubscriptionError.notConfigured
         }
 
+        guard !Purchases.shared.isAnonymous else { return }
+
         do {
             _ = try await Purchases.shared.logOut()
         } catch {
