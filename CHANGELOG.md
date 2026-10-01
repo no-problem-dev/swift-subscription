@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.1.0] - 2026-10-01
+
 ### Added
 - Custom variables for paywalls built in the RevenueCat dashboard. `PaywallVariable`
   (`.string`, `.number`, `.bool`) lives in `SubscriptionUI`, so an app can build the values
