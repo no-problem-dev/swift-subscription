@@ -63,6 +63,7 @@ public struct RevenueCatPaywallView: View {
     private let onDismiss: (@MainActor () -> Void)?
     private let onPending: (@MainActor () -> Void)?
     private let onNothingToRestore: (@MainActor () -> Void)?
+    private let onEntitledStatus: (@MainActor (SubscriptionStatus) -> Void)?
 
     @State private var phase: Phase
 
@@ -97,13 +98,15 @@ public struct RevenueCatPaywallView: View {
         self.onDismiss = onDismiss
         self.onPending = onPending
         self.onNothingToRestore = onNothingToRestore
+        self.onEntitledStatus = nil
         self._phase = State(initialValue: .loading)
     }
 
     init(
         loaded offering: Offering,
         displayCloseButton: Bool,
-        handlers: PaywallHandlers
+        handlers: PaywallHandlers,
+        onEntitledStatus: (@MainActor (SubscriptionStatus) -> Void)? = nil
     ) {
         self.offeringIdentifier = offering.identifier
         self.displayCloseButton = displayCloseButton
@@ -112,6 +115,7 @@ public struct RevenueCatPaywallView: View {
         self.onDismiss = handlers.onDismiss
         self.onPending = handlers.onPending
         self.onNothingToRestore = handlers.onNothingToRestore
+        self.onEntitledStatus = onEntitledStatus
         self._phase = State(initialValue: .loaded(offering))
     }
 
@@ -190,7 +194,11 @@ public struct RevenueCatPaywallView: View {
         do {
             let status = try await subscriptionUseCase.checkSubscriptionStatus()
             if status.isActive {
-                onEntitled?()
+                if let onEntitledStatus {
+                    onEntitledStatus(status)
+                } else {
+                    onEntitled?()
+                }
             } else if afterRestore {
                 onNothingToRestore?()
             }

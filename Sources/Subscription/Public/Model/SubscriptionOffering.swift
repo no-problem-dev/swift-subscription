@@ -29,6 +29,14 @@ public struct SubscriptionPackage: Sendable, Identifiable {
     /// identifier.
     public let id: String
 
+    /// The App Store product identifier, such as `"pro.yearly"`.
+    ///
+    /// The identifier ``SubscriptionStatus/activePackageId`` reports once this package is bought,
+    /// and the one to key the app's own copy and server data on: the package identifier is a
+    /// dashboard setting (`$rc_annual` unless renamed) and can change without the product
+    /// changing. Equal to ``id`` for a package made with the initialiser that does not take it.
+    public let productId: String
+
     /// The product's display name as configured in the store.
     public let title: String
 
@@ -77,7 +85,41 @@ public struct SubscriptionPackage: Sendable, Identifiable {
         duration: PackageDuration,
         introductoryOffer: IntroductoryOffer? = nil
     ) {
+        self.init(
+            id: id,
+            productId: id,
+            title: title,
+            description: description,
+            price: price,
+            pricePerMonth: pricePerMonth,
+            duration: duration,
+            introductoryOffer: introductoryOffer
+        )
+    }
+
+    /// Creates a package whose App Store product identifier differs from its package identifier.
+    ///
+    /// - Parameters:
+    ///   - id: The package identifier within its offering.
+    ///   - productId: The App Store product identifier.
+    ///   - title: The display name.
+    ///   - description: The store description.
+    ///   - price: The price, pre-formatted for the customer's storefront.
+    ///   - pricePerMonth: The monthly equivalent for annual packages; `nil` otherwise.
+    ///   - duration: How long the purchase lasts.
+    ///   - introductoryOffer: The introductory offer, such as a free trial; `nil` for none.
+    public init(
+        id: String,
+        productId: String,
+        title: String,
+        description: String,
+        price: String,
+        pricePerMonth: String?,
+        duration: PackageDuration,
+        introductoryOffer: IntroductoryOffer? = nil
+    ) {
         self.id = id
+        self.productId = productId
         self.title = title
         self.description = description
         self.price = price

@@ -64,11 +64,12 @@ final class RevenueCatRepository: SubscriptionRepository {
         let packages = offering.availablePackages.map { package in
             SubscriptionPackage(
                 id: package.identifier,
+                productId: package.storeProduct.productIdentifier,
                 title: package.storeProduct.localizedTitle,
                 description: package.storeProduct.localizedDescription,
                 price: package.storeProduct.localizedPriceString,
                 pricePerMonth: calculateMonthlyPrice(for: package),
-                duration: convertDuration(for: package.packageType),
+                duration: convertDuration(for: package),
                 introductoryOffer: package.storeProduct.introductoryDiscount.map { discount in
                     Self.introductoryOffer(
                         paymentMode: discount.paymentMode,
@@ -187,14 +188,14 @@ final class RevenueCatRepository: SubscriptionRepository {
 
     private func calculateMonthlyPrice(for package: Package) -> String? {
         Self.monthlyPriceString(
-            packageType: package.packageType,
+            duration: convertDuration(for: package),
             price: package.storeProduct.price,
             locale: package.storeProduct.priceFormatter?.locale
         )
     }
 
-    private func convertDuration(for packageType: PackageType) -> PackageDuration {
-        Self.packageDuration(for: packageType)
+    private func convertDuration(for package: Package) -> PackageDuration {
+        Self.packageDuration(for: package.packageType, period: package.storeProduct.subscriptionPeriod)
     }
 
     // MARK: - Testable Core
@@ -311,7 +312,15 @@ final class RevenueCatRepository: SubscriptionRepository {
         price: Decimal,
         locale: Locale?
     ) -> String? {
-        guard packageType == .annual else { return nil }
+        monthlyPriceString(duration: packageDuration(for: packageType), price: price, locale: locale)
+    }
+
+    static func monthlyPriceString(
+        duration: PackageDuration,
+        price: Decimal,
+        locale: Locale?
+    ) -> String? {
+        guard duration == .annual else { return nil }
 
         let monthlyPrice = price / 12
 
@@ -322,7 +331,9 @@ final class RevenueCatRepository: SubscriptionRepository {
         return formatter.string(from: monthlyPrice as NSDecimalNumber)
     }
 
-    static func packageDuration(for packageType: PackageType) -> PackageDuration {
+    /// How long a package lasts. A package with a custom identifier in the dashboard has the
+    /// type `.custom`, so its length is read from the product's subscription period instead.
+    static func packageDuration(for packageType: PackageType, period: SubscriptionPeriod? = nil) -> PackageDuration {
         switch packageType {
         case .monthly:
             return .monthly
@@ -330,6 +341,19 @@ final class RevenueCatRepository: SubscriptionRepository {
             return .annual
         case .lifetime:
             return .lifetime
+        case .custom, .unknown:
+            return period.map(packageDuration(for:)) ?? .unknown
+        default:
+            return .unknown
+        }
+    }
+
+    static func packageDuration(for period: SubscriptionPeriod) -> PackageDuration {
+        switch (period.unit, period.value) {
+        case (.month, 1):
+            return .monthly
+        case (.year, 1), (.month, 12):
+            return .annual
         default:
             return .unknown
         }

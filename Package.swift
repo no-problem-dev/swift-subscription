@@ -31,7 +31,7 @@ let package = Package(
     ],
     dependencies: [
         // RevenueCat SDK
-        .package(url: "https://github.com/RevenueCat/purchases-ios.git", from: "5.19.0"),
+        .package(url: "https://github.com/RevenueCat/purchases-ios.git", from: "5.90.0"),
         .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.0")
     ],
     targets: [
@@ -73,7 +73,8 @@ let package = Package(
             name: "SubscriptionRevenueCatUITests",
             dependencies: [
                 "SubscriptionRevenueCatUI",
-                .product(name: "RevenueCat", package: "purchases-ios")
+                .product(name: "RevenueCat", package: "purchases-ios"),
+                .product(name: "RevenueCatUI", package: "purchases-ios")
             ],
             path: "Tests/SubscriptionRevenueCatUITests"
         )

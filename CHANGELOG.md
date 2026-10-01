@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- Custom variables for paywalls built in the RevenueCat dashboard. `PaywallVariable`
+  (`.string`, `.number`, `.bool`) lives in `SubscriptionUI`, so an app can build the values
+  without linking RevenueCatUI. `PaywallContainer(mode:variables:onEntitled:…)` hands them to the
+  RevenueCat paywall, and `.paywallVariables(_:)` does the same from any ancestor of a
+  `RevenueCatPaywallView`. The app's own paywall does not read them.
+- Placements. `PaywallMode.revenueCat(placement:)` and `.automatic(placement:)` look up the
+  offering the dashboard serves at a placement (`Offerings.currentOffering(forPlacement:)`), and
+  `PaywallMode.placementIdentifier` names it. A placement the dashboard does not know falls back
+  to the current offering; a placement set to serve nothing ends at the app's own paywall.
+- What was bought. The `onEntitled` of `PaywallContainer(mode:variables:…)` receives the
+  `SubscriptionStatus` the purchase or restore left behind; `activePackageId` is the App Store
+  product identifier. The existing initialiser and its argument-less `onEntitled` are unchanged.
+- `SubscriptionPackage.productId`, the App Store product identifier, and an initialiser that
+  takes it. The existing initialiser sets it to `id`.
+
+### Fixed
+- A package with a custom identifier in the dashboard (`pro.yearly` rather than `$rc_annual`)
+  has the package type `.custom`, and its `duration` used to be `.unknown` and its
+  `pricePerMonth` `nil`. Both are now read from the product's subscription period: one year or
+  twelve months is `.annual`, one month is `.monthly`.
+
+### Changed
+- The minimum RevenueCat SDK is 5.90.0 (was 5.19.0): dashboard paywalls with display rules and
+  `offer_price_with_zero` need it. An app pinned below 5.90.0 stops resolving until it raises
+  its own requirement.
+- `PaywallMode` holds a placement. Two modes that differ only in placement are no longer equal,
+  so `PaywallContainer` decides again when the placement changes.
+
+### Compatibility
+- Source compatible with 3.0.0: no public symbol was removed or changed, and every addition is a
+  new overload or a new property. Code that constructs `SubscriptionPackage` with the existing
+  initialiser keeps compiling and gets `productId == id`.
+- Behaviour change to check: an app that skipped `.unknown` packages, and whose dashboard uses
+  custom package identifiers, now receives those packages as `.annual` / `.monthly`.
+
 ## [3.0.0] - 2026-09-30
 
 ### Added

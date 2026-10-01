@@ -23,10 +23,12 @@ public struct PaywallMode: Sendable, Hashable {
 
     private let kind: Kind
     private let offering: String?
+    private let placement: String?
 
-    private init(_ kind: Kind, offering: String?) {
+    private init(_ kind: Kind, offering: String?, placement: String? = nil) {
         self.kind = kind
         self.offering = offering
+        self.placement = placement
     }
 
     /// Always the app's own paywall. RevenueCat is not asked anything.
@@ -57,12 +59,35 @@ public struct PaywallMode: Sendable, Hashable {
         PaywallMode(.automatic, offering: offering)
     }
 
-    /// The offering to look up, or `nil` for the current one.
+    /// The RevenueCat paywall for the offering the dashboard serves at a placement.
+    ///
+    /// A placement names a spot in the app, such as `"feature_gate"`, so that Targeting can serve
+    /// a different offering there, or none, without an app release. A placement the dashboard
+    /// does not know falls back to the current offering, as RevenueCat's
+    /// `Offerings.currentOffering(forPlacement:)` does; a placement set to serve nothing ends at
+    /// the app's own paywall.
+    public static func revenueCat(placement: String) -> PaywallMode {
+        PaywallMode(.revenueCat, offering: nil, placement: placement)
+    }
+
+    /// The RevenueCat paywall for the offering served at a placement when that offering has a
+    /// paywall attached, and the app's own paywall otherwise.
+    public static func automatic(placement: String) -> PaywallMode {
+        PaywallMode(.automatic, offering: nil, placement: placement)
+    }
+
+    /// The offering to look up, or `nil` for the current one or a placement's.
     ///
     /// Also `nil` for ``custom``, which looks nothing up; ask ``needsLookup`` to tell the two
     /// apart.
     public var offeringIdentifier: String? {
         kind == .custom ? nil : offering
+    }
+
+    /// The placement whose offering is looked up, or `nil` when the mode names an offering or
+    /// the current one.
+    public var placementIdentifier: String? {
+        kind == .custom ? nil : placement
     }
 
     /// Whether ``choice(for:)`` depends on anything RevenueCat knows.

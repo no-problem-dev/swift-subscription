@@ -106,6 +106,7 @@ own paywall according to a `PaywallMode`:
 | `.custom` | Always the app's own paywall. RevenueCat is not asked anything |
 | `.revenueCat(offering:)` | The RevenueCat paywall for the offering (`nil` for the current one) |
 | `.automatic(offering:)` | The RevenueCat paywall if the offering has one attached in the dashboard, the app's own otherwise |
+| `.revenueCat(placement:)` / `.automatic(placement:)` | The same, for the offering the dashboard serves at a placement |
 
 Whatever stops a RevenueCat paywall from being shown — no `SubscriptionUseCase` in the
 environment, the SDK not configured, the offerings failing to load, an offering that is not
@@ -148,6 +149,25 @@ so that the fallback sells the offering the mode named.
 `PaywallMode` and the rule that turns it into a choice (`PaywallMode.choice(for:)`) live in
 `SubscriptionUI`, so an app can hold the setting without linking RevenueCatUI.
 
+#### Custom variables and what was bought
+
+A dashboard paywall shows app values where its text says `{{ custom.name }}`. Pass them as
+`PaywallVariable`s, and take the `SubscriptionStatus` the purchase left behind:
+
+```swift
+PaywallContainer(
+    mode: .automatic,
+    variables: ["headline": .string(headline), "trial_charge_date": .string("9/17")],
+    onEntitled: { status in
+        if status.activePackageId == "pro.yearly" { askForNotifications() }
+    }
+) { handlers in … }
+```
+
+`status.activePackageId` is the App Store product identifier. `SubscriptionPackage.productId`
+is the same identifier on the paywall's side, whatever the package is called in the dashboard.
+`.paywallVariables(_:)` sets the variables from any ancestor of a `RevenueCatPaywallView`.
+
 ## Documentation
 
 **[API documentation and Getting Started](https://no-problem-dev.github.io/swift-subscription/documentation/subscription/)**
@@ -160,7 +180,7 @@ cannot be tested on a simulator.
 
 - iOS 17.0+ / macOS 14.0+
 - Swift 6.0+
-- [RevenueCat SDK](https://github.com/RevenueCat/purchases-ios) 5.19.0+
+- [RevenueCat SDK](https://github.com/RevenueCat/purchases-ios) 5.90.0+
 
 ## Installation
 

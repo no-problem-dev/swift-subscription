@@ -90,3 +90,18 @@ final class OfferingSelectionTests: XCTestCase {
         XCTAssertTrue(status.isActive)
     }
 }
+
+final class SubscriptionPackageProductIdTests: XCTestCase {
+    func testProductIdDefaultsToThePackageIdentifier() {
+        let package = SubscriptionPackage(id: "pro.yearly", title: "", description: "", price: "¥6,000", pricePerMonth: nil, duration: .annual)
+        XCTAssertEqual(package.productId, "pro.yearly")
+    }
+
+    func testProductIdCanDifferFromThePackageIdentifier() {
+        let package = SubscriptionPackage(
+            id: "$rc_annual", productId: "pro.yearly", title: "", description: "", price: "¥6,000", pricePerMonth: nil, duration: .annual
+        )
+        XCTAssertEqual(package.id, "$rc_annual")
+        XCTAssertEqual(package.productId, "pro.yearly")
+    }
+}

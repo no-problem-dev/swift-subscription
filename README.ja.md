@@ -98,6 +98,7 @@ RevenueCatUI に依存するのは `SubscriptionRevenueCatUI` だけ。RevenueCa
 | `.custom` | 常に自前。RevenueCat には何も問い合わせない |
 | `.revenueCat(offering:)` | その offering の RevenueCat ペイウォール（`nil` なら current） |
 | `.automatic(offering:)` | offering にダッシュボードでペイウォールが付いていれば RevenueCat、無ければ自前 |
+| `.revenueCat(placement:)` / `.automatic(placement:)` | 同じ規則で、ダッシュボードが placement に配る offering を使う |
 
 RevenueCat のペイウォールを出せない理由があるとき —— 環境に `SubscriptionUseCase` が無い、
 SDK が設定されていない、offering の読み込みに失敗した、指定した offering が無い —— は
@@ -140,6 +141,25 @@ RevenueCat のペイウォールは閉じるボタンを自分で描くので、
 `PaywallMode` と、それをどちらを出すかに変える規則（`PaywallMode.choice(for:)`）は
 `SubscriptionUI` にある。RevenueCatUI をリンクしないアプリでも設定値として持てる。
 
+#### カスタム変数と、買えた商品
+
+ダッシュボードのペイウォールは、文の `{{ custom.名前 }}` にアプリの値を差し込む。値は
+`PaywallVariable` で渡し、買えた後は `SubscriptionStatus` を受け取る。
+
+```swift
+PaywallContainer(
+    mode: .automatic,
+    variables: ["headline": .string(headline), "trial_charge_date": .string("9/17")],
+    onEntitled: { status in
+        if status.activePackageId == "pro.yearly" { askForNotifications() }
+    }
+) { handlers in … }
+```
+
+`status.activePackageId` は App Store の商品 ID。`SubscriptionPackage.productId` も同じ ID で、
+ダッシュボードでのパッケージの名前によらない。`RevenueCatPaywallView` には、祖先に
+`.paywallVariables(_:)` を付けて渡す。
+
 ## ドキュメント
 
 **[API ドキュメントと Getting Started](https://no-problem-dev.github.io/swift-subscription/documentation/subscription/)**
@@ -152,7 +172,7 @@ Getting Started に、前提となる App Store Connect / RevenueCat ダッシ�
 
 - iOS 17.0+ / macOS 14.0+
 - Swift 6.0+
-- [RevenueCat SDK](https://github.com/RevenueCat/purchases-ios) 5.19.0+
+- [RevenueCat SDK](https://github.com/RevenueCat/purchases-ios) 5.90.0+
 
 ## インストール
 

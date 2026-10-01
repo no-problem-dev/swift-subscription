@@ -78,4 +78,27 @@ struct PaywallModeTests {
         #expect(revenueCat == .revenueCat(offering: nil))
         #expect(automatic != revenueCat)
     }
+
+    @Test("placement を指定したら offering の指定は無く、placement を探す")
+    func placementIdentifier() {
+        #expect(PaywallMode.automatic(placement: "feature_gate").placementIdentifier == "feature_gate")
+        #expect(PaywallMode.automatic(placement: "feature_gate").offeringIdentifier == nil)
+        #expect(PaywallMode.revenueCat(placement: "feature_gate").placementIdentifier == "feature_gate")
+        #expect(PaywallMode.automatic.placementIdentifier == nil)
+        #expect(PaywallMode.automatic(offering: "summer").placementIdentifier == nil)
+        #expect(PaywallMode.custom.placementIdentifier == nil)
+    }
+
+    @Test("placement の mode も、選び方は offering の mode と同じ", arguments: lookups)
+    func placementChoosesLikeOffering(_ lookup: PaywallOfferingLookup) {
+        #expect(PaywallMode.automatic(placement: "feature_gate").choice(for: lookup) == PaywallMode.automatic.choice(for: lookup))
+        #expect(PaywallMode.revenueCat(placement: "feature_gate").choice(for: lookup) == PaywallMode.revenueCat.choice(for: lookup))
+        #expect(PaywallMode.automatic(placement: "feature_gate").needsLookup)
+    }
+
+    @Test("placement が違えば別の mode（変えたら選び直す）")
+    func placementsDiffer() {
+        #expect(PaywallMode.automatic(placement: "a") != .automatic(placement: "b"))
+        #expect(PaywallMode.automatic(placement: "a") != .automatic)
+    }
 }

@@ -131,4 +131,19 @@ final class RevenueCatRepositoryTests: XCTestCase {
         XCTAssertEqual(RevenueCatRepository.packageDuration(for: .weekly), .unknown)
         XCTAssertEqual(RevenueCatRepository.packageDuration(for: .unknown), .unknown)
     }
+
+    func testCustomPackageTakesItsDurationFromTheSubscriptionPeriod() {
+        XCTAssertEqual(RevenueCatRepository.packageDuration(for: .custom, period: SubscriptionPeriod(value: 1, unit: .year)), .annual)
+        XCTAssertEqual(RevenueCatRepository.packageDuration(for: .custom, period: SubscriptionPeriod(value: 12, unit: .month)), .annual)
+        XCTAssertEqual(RevenueCatRepository.packageDuration(for: .custom, period: SubscriptionPeriod(value: 1, unit: .month)), .monthly)
+        XCTAssertEqual(RevenueCatRepository.packageDuration(for: .custom, period: SubscriptionPeriod(value: 1, unit: .week)), .unknown)
+        XCTAssertEqual(RevenueCatRepository.packageDuration(for: .custom, period: nil), .unknown)
+        XCTAssertEqual(RevenueCatRepository.packageDuration(for: .monthly, period: SubscriptionPeriod(value: 1, unit: .year)), .monthly)
+    }
+
+    func testCustomAnnualPackageHasAMonthlyEquivalent() {
+        let locale = Locale(identifier: "ja_JP")
+        XCTAssertNotNil(RevenueCatRepository.monthlyPriceString(duration: .annual, price: 6000, locale: locale))
+        XCTAssertNil(RevenueCatRepository.monthlyPriceString(duration: .monthly, price: 980, locale: locale))
+    }
 }
