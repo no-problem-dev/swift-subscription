@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.1.1] - 2026-10-01
+
 ### Fixed
 - `clearUser()` on an identity that is already anonymous (sign-out after a `syncUser(userId:)`
   that failed) used to throw `userSyncFailed`, because RevenueCat refuses `logOut()` for an
