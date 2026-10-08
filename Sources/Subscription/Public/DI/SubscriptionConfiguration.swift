@@ -49,6 +49,13 @@ public struct SubscriptionConfiguration: Sendable {
     /// should not hold into it.
     public let customAttributesSetter: (@Sendable (String) async -> Void)?
 
+    /// Lets a RevenueCat Test Store key run in a build compiled without `DEBUG`.
+    ///
+    /// The RevenueCat SDK crashes on purpose when it sees a Test Store key in a release-compiled
+    /// build, TestFlight included. Turn this on only for an app that can never be promoted to
+    /// the App Store, such as a separate development app distributed through TestFlight.
+    public let allowsTestStoreInReleaseBuilds: Bool
+
     /// Creates a configuration.
     ///
     /// - Parameters:
@@ -64,9 +71,31 @@ public struct SubscriptionConfiguration: Sendable {
         gracePeriod: TimeInterval = SubscriptionConfiguration.defaultGracePeriod,
         customAttributesSetter: (@Sendable (String) async -> Void)? = nil
     ) {
+        self.init(
+            apiKey: apiKey,
+            entitlementId: entitlementId,
+            gracePeriod: gracePeriod,
+            customAttributesSetter: customAttributesSetter,
+            allowsTestStoreInReleaseBuilds: false
+        )
+    }
+
+    /// Creates a configuration that decides whether a Test Store key may run in a
+    /// release-compiled build.
+    ///
+    /// - Parameter allowsTestStoreInReleaseBuilds: Pass `true` only for an app that can never
+    ///   reach the App Store. See ``allowsTestStoreInReleaseBuilds``.
+    public init(
+        apiKey: String,
+        entitlementId: String,
+        gracePeriod: TimeInterval = SubscriptionConfiguration.defaultGracePeriod,
+        customAttributesSetter: (@Sendable (String) async -> Void)? = nil,
+        allowsTestStoreInReleaseBuilds: Bool
+    ) {
         self.apiKey = apiKey
         self.entitlementId = entitlementId
         self.gracePeriod = gracePeriod
         self.customAttributesSetter = customAttributesSetter
+        self.allowsTestStoreInReleaseBuilds = allowsTestStoreInReleaseBuilds
     }
 }

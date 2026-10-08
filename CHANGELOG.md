@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `SubscriptionConfiguration(allowsTestStoreInReleaseBuilds:)`. The RevenueCat SDK crashes on
+  purpose when a Test Store key runs in a build compiled without `DEBUG` (TestFlight included).
+  Turning this on passes RevenueCat's `forceAllowTestStoreInReleaseBuilds`, for a separate
+  development app that is distributed through TestFlight and can never reach the App Store.
+  Defaults to `false`, so existing apps behave as before.
+
 ## [3.1.1] - 2026-10-01
 
 ### Fixed

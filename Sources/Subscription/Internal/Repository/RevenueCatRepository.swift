@@ -14,15 +14,25 @@ final class RevenueCatRepository: SubscriptionRepository {
 
     init(configuration: SubscriptionConfiguration) {
         self.configuration = configuration
-        self.isConfigured = Self.configureRevenueCat(apiKey: configuration.apiKey)
+        self.isConfigured = Self.configureRevenueCat(
+            apiKey: configuration.apiKey,
+            allowsTestStoreInReleaseBuilds: configuration.allowsTestStoreInReleaseBuilds
+        )
     }
 
     // MARK: - Configuration
 
-    private static func configureRevenueCat(apiKey: String) -> Bool {
+    private static func configureRevenueCat(apiKey: String, allowsTestStoreInReleaseBuilds: Bool) -> Bool {
         guard !apiKey.isEmpty else { return false }
 
-        Purchases.configure(withAPIKey: apiKey)
+        Purchases.configure(
+            with: Configuration.Builder(withAPIKey: apiKey)
+                .with(dangerousSettings: DangerousSettings(
+                    autoSyncPurchases: true,
+                    forceAllowTestStoreInReleaseBuilds: allowsTestStoreInReleaseBuilds
+                ))
+                .build()
+        )
         return true
     }
 
