@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.3.0] - 2026-10-26
+
 ### Added
 - `SubscriptionPackage.priceAmount` (the price as a `Decimal`) and `priceLocale` (the storefront
   locale the price was formatted in), filled from the store product. They let a paywall do
