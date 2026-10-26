@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `SubscriptionPackage.priceAmount` (the price as a `Decimal`) and `priceLocale` (the storefront
+  locale the price was formatted in), filled from the store product. They let a paywall do
+  arithmetic across packages, such as "save ¥3,600 a year against paying monthly", without
+  parsing the formatted `price`. `formattedPrice(_:)` formats such a derived amount in the
+  package's own currency and style, and returns `nil` rather than guess a currency when the
+  locale is unknown. Both initialisers take the new values as trailing parameters that default
+  to `nil`, so existing call sites compile unchanged.
+
 ## [3.2.0] - 2026-10-08
 
 ### Added
