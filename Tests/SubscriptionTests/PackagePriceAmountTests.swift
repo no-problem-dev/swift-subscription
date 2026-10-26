@@ -5,8 +5,8 @@ import XCTest
 final class PackagePriceAmountTests: XCTestCase {
     private func package(_ duration: PackageDuration, _ amount: Decimal, locale: Locale?) -> SubscriptionPackage {
         SubscriptionPackage(
-            id: duration.rawValue, title: "", description: "", price: "", pricePerMonth: nil,
-            duration: duration, priceAmount: amount, priceLocale: locale
+            id: duration.rawValue, productId: duration.rawValue, title: "", description: "", price: "", pricePerMonth: nil,
+            duration: duration, introductoryOffer: nil, priceAmount: amount, priceLocale: locale
         )
     }
 
