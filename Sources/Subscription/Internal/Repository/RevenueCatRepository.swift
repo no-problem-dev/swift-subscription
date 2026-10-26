@@ -88,7 +88,9 @@ final class RevenueCatRepository: SubscriptionRepository {
                         price: discount.localizedPriceString,
                         eligibility: eligibility[package]?.status
                     )
-                }
+                },
+                priceAmount: package.storeProduct.price,
+                priceLocale: package.storeProduct.priceFormatter?.locale
             )
         }
 
@@ -334,13 +336,7 @@ final class RevenueCatRepository: SubscriptionRepository {
     ) -> String? {
         guard duration == .annual else { return nil }
 
-        let monthlyPrice = price / 12
-
-        let formatter = NumberFormatter()
-        formatter.numberStyle = .currency
-        formatter.locale = locale
-
-        return formatter.string(from: monthlyPrice as NSDecimalNumber)
+        return SubscriptionPackage.currencyString(price / 12, locale: locale)
     }
 
     /// How long a package lasts. A package with a custom identifier in the dashboard has the

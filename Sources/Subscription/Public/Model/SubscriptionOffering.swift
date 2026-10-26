@@ -63,6 +63,33 @@ public struct SubscriptionPackage: Sendable, Identifiable {
     /// offer before is charged ``price`` on day one.
     public let introductoryOffer: IntroductoryOffer?
 
+    /// The price as a number, for arithmetic across packages such as "save ¥3,600 a year
+    /// against paying monthly". `nil` when the package was made without one.
+    ///
+    /// Never show this directly: format a derived amount with ``formattedPrice(_:)`` so it
+    /// reads in the same currency and style as ``price``.
+    public let priceAmount: Decimal?
+
+    /// The storefront locale the store formatted ``price`` in. `nil` when unknown.
+    public let priceLocale: Locale?
+
+    /// Formats an amount derived from ``priceAmount`` in this package's currency and storefront
+    /// style, the way the store formats ``price``.
+    ///
+    /// Returns `nil` when the package does not know its storefront locale, rather than
+    /// guessing a currency.
+    public func formattedPrice(_ amount: Decimal) -> String? {
+        guard let priceLocale else { return nil }
+        return Self.currencyString(amount, locale: priceLocale)
+    }
+
+    static func currencyString(_ amount: Decimal, locale: Locale?) -> String? {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .currency
+        formatter.locale = locale
+        return formatter.string(from: amount as NSDecimalNumber)
+    }
+
     /// Creates a package.
     ///
     /// Provided for tests, previews, and paywall mock-ups; real values come from
@@ -76,6 +103,8 @@ public struct SubscriptionPackage: Sendable, Identifiable {
     ///   - pricePerMonth: The monthly equivalent for annual packages; `nil` otherwise.
     ///   - duration: How long the purchase lasts.
     ///   - introductoryOffer: The introductory offer, such as a free trial; `nil` for none.
+    ///   - priceAmount: The price as a number; `nil` when not needed.
+    ///   - priceLocale: The storefront locale ``price`` is formatted in; `nil` when not needed.
     public init(
         id: String,
         title: String,
@@ -83,7 +112,9 @@ public struct SubscriptionPackage: Sendable, Identifiable {
         price: String,
         pricePerMonth: String?,
         duration: PackageDuration,
-        introductoryOffer: IntroductoryOffer? = nil
+        introductoryOffer: IntroductoryOffer? = nil,
+        priceAmount: Decimal? = nil,
+        priceLocale: Locale? = nil
     ) {
         self.init(
             id: id,
@@ -93,7 +124,9 @@ public struct SubscriptionPackage: Sendable, Identifiable {
             price: price,
             pricePerMonth: pricePerMonth,
             duration: duration,
-            introductoryOffer: introductoryOffer
+            introductoryOffer: introductoryOffer,
+            priceAmount: priceAmount,
+            priceLocale: priceLocale
         )
     }
 
@@ -108,6 +141,8 @@ public struct SubscriptionPackage: Sendable, Identifiable {
     ///   - pricePerMonth: The monthly equivalent for annual packages; `nil` otherwise.
     ///   - duration: How long the purchase lasts.
     ///   - introductoryOffer: The introductory offer, such as a free trial; `nil` for none.
+    ///   - priceAmount: The price as a number; `nil` when not needed.
+    ///   - priceLocale: The storefront locale ``price`` is formatted in; `nil` when not needed.
     public init(
         id: String,
         productId: String,
@@ -116,7 +151,9 @@ public struct SubscriptionPackage: Sendable, Identifiable {
         price: String,
         pricePerMonth: String?,
         duration: PackageDuration,
-        introductoryOffer: IntroductoryOffer? = nil
+        introductoryOffer: IntroductoryOffer? = nil,
+        priceAmount: Decimal? = nil,
+        priceLocale: Locale? = nil
     ) {
         self.id = id
         self.productId = productId
@@ -126,6 +163,8 @@ public struct SubscriptionPackage: Sendable, Identifiable {
         self.pricePerMonth = pricePerMonth
         self.duration = duration
         self.introductoryOffer = introductoryOffer
+        self.priceAmount = priceAmount
+        self.priceLocale = priceLocale
     }
 }
 
