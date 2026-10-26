@@ -13,8 +13,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
   arithmetic across packages, such as "save ¥3,600 a year against paying monthly", without
   parsing the formatted `price`. `formattedPrice(_:)` formats such a derived amount in the
   package's own currency and style, and returns `nil` rather than guess a currency when the
-  locale is unknown. Both initialisers take the new values as trailing parameters that default
-  to `nil`, so existing call sites compile unchanged.
+  locale is unknown. A new initialiser takes them; the existing initialisers are unchanged and
+  leave both `nil`.
 
 ## [3.2.0] - 2026-10-08
 

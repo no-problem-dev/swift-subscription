@@ -103,8 +103,6 @@ public struct SubscriptionPackage: Sendable, Identifiable {
     ///   - pricePerMonth: The monthly equivalent for annual packages; `nil` otherwise.
     ///   - duration: How long the purchase lasts.
     ///   - introductoryOffer: The introductory offer, such as a free trial; `nil` for none.
-    ///   - priceAmount: The price as a number; `nil` when not needed.
-    ///   - priceLocale: The storefront locale ``price`` is formatted in; `nil` when not needed.
     public init(
         id: String,
         title: String,
@@ -112,9 +110,7 @@ public struct SubscriptionPackage: Sendable, Identifiable {
         price: String,
         pricePerMonth: String?,
         duration: PackageDuration,
-        introductoryOffer: IntroductoryOffer? = nil,
-        priceAmount: Decimal? = nil,
-        priceLocale: Locale? = nil
+        introductoryOffer: IntroductoryOffer? = nil
     ) {
         self.init(
             id: id,
@@ -125,8 +121,8 @@ public struct SubscriptionPackage: Sendable, Identifiable {
             pricePerMonth: pricePerMonth,
             duration: duration,
             introductoryOffer: introductoryOffer,
-            priceAmount: priceAmount,
-            priceLocale: priceLocale
+            priceAmount: nil,
+            priceLocale: nil
         )
     }
 
@@ -141,8 +137,6 @@ public struct SubscriptionPackage: Sendable, Identifiable {
     ///   - pricePerMonth: The monthly equivalent for annual packages; `nil` otherwise.
     ///   - duration: How long the purchase lasts.
     ///   - introductoryOffer: The introductory offer, such as a free trial; `nil` for none.
-    ///   - priceAmount: The price as a number; `nil` when not needed.
-    ///   - priceLocale: The storefront locale ``price`` is formatted in; `nil` when not needed.
     public init(
         id: String,
         productId: String,
@@ -151,9 +145,46 @@ public struct SubscriptionPackage: Sendable, Identifiable {
         price: String,
         pricePerMonth: String?,
         duration: PackageDuration,
-        introductoryOffer: IntroductoryOffer? = nil,
-        priceAmount: Decimal? = nil,
-        priceLocale: Locale? = nil
+        introductoryOffer: IntroductoryOffer? = nil
+    ) {
+        self.init(
+            id: id,
+            productId: productId,
+            title: title,
+            description: description,
+            price: price,
+            pricePerMonth: pricePerMonth,
+            duration: duration,
+            introductoryOffer: introductoryOffer,
+            priceAmount: nil,
+            priceLocale: nil
+        )
+    }
+
+    /// Creates a package that also knows its price as a number, for arithmetic across packages.
+    ///
+    /// - Parameters:
+    ///   - id: The package identifier within its offering.
+    ///   - productId: The App Store product identifier.
+    ///   - title: The display name.
+    ///   - description: The store description.
+    ///   - price: The price, pre-formatted for the customer's storefront.
+    ///   - pricePerMonth: The monthly equivalent for annual packages; `nil` otherwise.
+    ///   - duration: How long the purchase lasts.
+    ///   - introductoryOffer: The introductory offer, such as a free trial; `nil` for none.
+    ///   - priceAmount: The price as a number.
+    ///   - priceLocale: The storefront locale ``price`` is formatted in.
+    public init(
+        id: String,
+        productId: String,
+        title: String,
+        description: String,
+        price: String,
+        pricePerMonth: String?,
+        duration: PackageDuration,
+        introductoryOffer: IntroductoryOffer?,
+        priceAmount: Decimal?,
+        priceLocale: Locale?
     ) {
         self.id = id
         self.productId = productId
