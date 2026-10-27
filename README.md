@@ -168,6 +168,22 @@ PaywallContainer(
 is the same identifier on the paywall's side, whatever the package is called in the dashboard.
 `.paywallVariables(_:)` sets the variables from any ancestor of a `RevenueCatPaywallView`.
 
+### Counting impressions of your own paywall
+
+RevenueCat counts impressions of its own paywalls; one the app draws is invisible to the Paywall
+Encounter chart until the app says it was shown. Call
+`trackPaywallImpression(source:)` once per presentation, when the paywall is on screen, with
+where it was shown from — `source` becomes RevenueCat's paywall identifier, so the chart splits by
+it. A paywall that sells a named offering passes `offeringId:` as well, so the impression carries
+that offering's placement and targeting:
+
+```swift
+Task { await subscriptionUseCase.trackPaywallImpression(source: "settings") }
+```
+
+Each call is a separate impression, so guard it against a second `onAppear` for the same
+presentation. RevenueCat paywalls (`RevenueCatPaywallView`) are counted by the SDK and need no call.
+
 ## Documentation
 
 **[API documentation and Getting Started](https://no-problem-dev.github.io/swift-subscription/documentation/subscription/)**

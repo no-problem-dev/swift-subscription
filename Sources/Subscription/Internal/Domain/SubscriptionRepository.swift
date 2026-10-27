@@ -26,6 +26,10 @@ protocol SubscriptionRepository: Sendable {
     /// Returns the billing identity to an anonymous one.
     func clearUser() async throws
 
+    /// Records that the app's own paywall selling the offering with this identifier (the current
+    /// one for `nil`) was shown; `paywallId` is where it was shown from.
+    func trackPaywallImpression(paywallId: String, offeringId: String?) async
+
     /// Streams entitlement changes pushed by the store, including ones this app did not cause.
     func observeSubscriptionChanges() -> AsyncStream<SubscriptionStatus>
 }

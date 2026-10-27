@@ -164,9 +164,48 @@ public protocol SubscriptionUseCase: Sendable {
     ///
     /// - Throws: ``SubscriptionError/userSyncFailed(_:)`` if sign-out is rejected.
     func clearUser() async throws
+
+    /// Tells RevenueCat that a paywall the app draws itself was put in front of the customer.
+    ///
+    /// RevenueCat counts the impressions of its own paywalls by itself. A paywall the app draws
+    /// is invisible to it until this is called, and without it the Paywall Encounter chart and
+    /// the paywall-view filter of experiment results leave that app out. Calling it gives an own
+    /// paywall the same definition of "seen" as a dashboard paywall.
+    ///
+    /// Call it once per presentation, when the paywall is on screen — not from every `onAppear`,
+    /// which SwiftUI can run more than once for one presentation, because each call is a
+    /// separate impression. Call it on every path that shows a paywall, or the counts undercount.
+    ///
+    /// The impression is recorded against the offering the paywall sells, carrying its placement
+    /// and targeting. When that offering cannot be found — the store unreachable, or the
+    /// dashboard has no offering by `offeringId` — nothing is recorded, because the paywall had
+    /// nothing to sell. Nothing is recorded either when the package was configured with an empty
+    /// API key. None of these is an error to report: an impression is analytics, not something
+    /// the customer is waiting on.
+    ///
+    /// The default implementation records nothing, which is right for a stand-in that reaches no
+    /// store.
+    ///
+    /// - Parameters:
+    ///   - source: Where the paywall was shown from, such as `"settings"` or `"onboarding"`. It
+    ///     is sent as RevenueCat's paywall identifier, so the chart can be split by it.
+    ///   - offeringId: The ``SubscriptionOffering/id`` the paywall sells, or `nil` for the
+    ///     current offering. Pass the identifier given to ``loadOffering(id:)`` when the paywall
+    ///     was built from it.
+    func trackPaywallImpression(source: String, offeringId: String?) async
 }
 
 public extension SubscriptionUseCase {
+    /// Records an impression of a paywall that sells the current offering.
+    ///
+    /// The same as ``trackPaywallImpression(source:offeringId:)`` with a `nil` offering.
+    ///
+    /// - Parameter source: Where the paywall was shown from.
+    func trackPaywallImpression(source: String) async {
+        await trackPaywallImpression(source: source, offeringId: nil)
+    }
+
+    func trackPaywallImpression(source: String, offeringId: String?) async {}
     func loadOffering(id: String) async throws -> SubscriptionOffering? {
         guard let current = try await loadOfferings(), current.id == id else { return nil }
         return current

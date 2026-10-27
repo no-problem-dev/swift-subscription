@@ -14,6 +14,13 @@ actor SubscriptionRepositoryMock: SubscriptionRepository {
     private(set) var clearUserCallCount = 0
     private(set) var loadedOfferingIds: [String?] = []
     private(set) var purchasedFrom: [String?] = []
+    private(set) var impressions: [PaywallImpression] = []
+
+    /// One `trackPaywallImpression` call, as the repository received it.
+    struct PaywallImpression: Equatable {
+        let paywallId: String
+        let offeringId: String?
+    }
 
     /// Pushes a status into the stream, standing in for a change the store would push.
     nonisolated let changesContinuation: AsyncStream<SubscriptionStatus>.Continuation
@@ -76,6 +83,10 @@ actor SubscriptionRepositoryMock: SubscriptionRepository {
     func clearUser() async throws {
         try throwIfNeeded()
         clearUserCallCount += 1
+    }
+
+    func trackPaywallImpression(paywallId: String, offeringId: String?) async {
+        impressions.append(PaywallImpression(paywallId: paywallId, offeringId: offeringId))
     }
 
     nonisolated func observeSubscriptionChanges() -> AsyncStream<SubscriptionStatus> {

@@ -78,6 +78,7 @@ sandbox account.
 - ``SubscriptionPackage``
 - ``PackageDuration``
 - ``IntroductoryOffer``
+- ``SubscriptionUseCase/trackPaywallImpression(source:offeringId:)``
 
 ### SwiftUI integration
 
