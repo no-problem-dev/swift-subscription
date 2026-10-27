@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.4.0] - 2026-10-27
+
 ### Added
 - `SubscriptionUseCase.trackPaywallImpression(source:offeringId:)` and
   `trackPaywallImpression(source:)`, which tell RevenueCat that a paywall the app draws itself was
