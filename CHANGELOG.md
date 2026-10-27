@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `SubscriptionUseCase.trackPaywallImpression(source:offeringId:)` and
+  `trackPaywallImpression(source:)`, which tell RevenueCat that a paywall the app draws itself was
+  shown (`Purchases.trackCustomPaywallImpression`), so the Paywall Encounter chart and the
+  paywall-view filter of experiment results count it the way they count a RevenueCat paywall.
+  `source` is sent as the paywall identifier; the impression carries the offering the paywall
+  sells, with its placement and targeting. When that offering cannot be found, or the API key is
+  empty, nothing is recorded. The protocol's default implementation records nothing, so an
+  existing conformance keeps compiling.
+
 ## [3.3.0] - 2026-10-26
 
 ### Added

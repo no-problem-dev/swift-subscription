@@ -144,4 +144,8 @@ public final class SubscriptionUseCaseImpl: SubscriptionUseCase {
         await state.forget()
     }
 
+    public func trackPaywallImpression(source: String, offeringId: String?) async {
+        await repository.trackPaywallImpression(paywallId: source, offeringId: offeringId)
+    }
+
 }

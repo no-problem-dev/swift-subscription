@@ -168,6 +168,20 @@ final class RevenueCatRepository: SubscriptionRepository {
         }
     }
 
+    func trackPaywallImpression(paywallId: String, offeringId: String?) async {
+        guard isConfigured else { return }
+
+        // The `Offering` is passed rather than its identifier: the SDK derives the placement and
+        // targeting context from it, and its identifier-only initialiser is deprecated for losing
+        // them. `offerings()` answers from the SDK's cache when the paywall has just loaded it.
+        guard let offerings = try? await Purchases.shared.offerings(),
+              let offering = Self.offering(offeringId, in: offerings) else { return }
+
+        Purchases.shared.trackCustomPaywallImpression(
+            CustomPaywallImpressionParams(paywallId: paywallId, offering: offering)
+        )
+    }
+
     func observeSubscriptionChanges() -> AsyncStream<SubscriptionStatus> {
         AsyncStream { continuation in
             guard isConfigured else {

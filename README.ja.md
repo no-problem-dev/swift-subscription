@@ -160,6 +160,21 @@ PaywallContainer(
 ダッシュボードでのパッケージの名前によらない。`RevenueCatPaywallView` には、祖先に
 `.paywallVariables(_:)` を付けて渡す。
 
+### 自前のペイウォールの表示を数える
+
+RevenueCat は自分のペイウォールの表示は自分で数えるが、アプリが描いたペイウォールは、出したと伝える
+まで Paywall Encounter のチャートに載らない。表示ごとに 1 回、画面に出たところで
+`trackPaywallImpression(source:)` を呼ぶ。`source` は出した場所で、RevenueCat のペイウォール ID
+として送られ、チャートをこれで分けられる。名前を指定した offering を売るペイウォールは
+`offeringId:` も渡す。その offering の placement とターゲティングが表示に付く。
+
+```swift
+Task { await subscriptionUseCase.trackPaywallImpression(source: "settings") }
+```
+
+呼ぶたびに別の表示として数えられるので、同じ表示で `onAppear` が 2 回走っても 1 回にとどめる。
+RevenueCat のペイウォール（`RevenueCatPaywallView`）は SDK が数えるので呼ばなくてよい。
+
 ## ドキュメント
 
 **[API ドキュメントと Getting Started](https://no-problem-dev.github.io/swift-subscription/documentation/subscription/)**
