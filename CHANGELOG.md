@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `SubscriptionUseCase.loadOffering(placement:)`, which loads the offering the dashboard serves at a
+  placement, and the current offering when it serves none there. `SubscriptionOffering.servedBy`
+  (`.placement(_:)`, `.current`, `.identifier`) says which one came back.
+- `SubscriptionOffering.metadata`, the offering's dashboard metadata with string values only, and
+  `droppedMetadataKeys`, the keys whose values were of another type and were left out.
+- `purchase(packageId:from:)` and `trackPaywallImpression(source:offering:)`, which buy from and
+  record an impression of an offering the package loaded the way it was found, so a placement's
+  offering carries its placement to RevenueCat. If the dashboard has moved the placement to another
+  offering since, the package is still bought from the offering that was shown.
+- The protocol's default implementations answer `loadOffering(placement:)` with `loadOfferings()`
+  and route the two new calls through the identifier-based ones, so an existing conformance keeps
+  compiling.
+
+### Changed
+- `SubscriptionRevenueCatUI` reads a placement through the same lookup as the core. Its behaviour
+  is unchanged: a placement the dashboard serves nothing at still finds no offering there.
+
 ## [3.4.0] - 2026-10-27
 
 ### Added

@@ -90,6 +90,31 @@ public protocol SubscriptionUseCase: Sendable {
     /// - Throws: ``SubscriptionError/networkError(_:)`` if the products cannot be fetched.
     func loadOffering(id: String) async throws -> SubscriptionOffering?
 
+    /// Fetches the offering the dashboard serves at a placement, or the current one when it
+    /// serves nothing there.
+    ///
+    /// A placement names where a paywall opens — `"onboarding"`, `"feature_gate"` — and the
+    /// dashboard's placements and targeting decide which offering it sells there, so the products
+    /// and metadata of each entry point can change, or be experimented on, without a release.
+    ///
+    /// ``SubscriptionOffering/servedBy`` says which one came back: `.placement` when the dashboard
+    /// served an offering at the placement, `.current` when it did not — the placement is unknown
+    /// to the dashboard and has no fallback, it is set to serve no offering, or the project has no
+    /// placements at all. A placement the dashboard does not list but answers with its placements'
+    /// fallback offering is reported as `.placement`: the store does not tell the two apart.
+    ///
+    /// Buy from it with ``purchase(packageId:from:)`` and record it with
+    /// ``trackPaywallImpression(source:offering:)``, which carry the placement to RevenueCat.
+    ///
+    /// The default implementation answers with ``loadOfferings()``, which is right for a
+    /// conformance that knows a single offering.
+    ///
+    /// - Parameter placement: The placement identifier set in the dashboard.
+    /// - Returns: The offering, or `nil` when the dashboard serves nothing at the placement and
+    ///   no offering is marked current.
+    /// - Throws: ``SubscriptionError/networkError(_:)`` if the products cannot be fetched.
+    func loadOffering(placement: String) async throws -> SubscriptionOffering?
+
     /// Presents the system purchase sheet for one package and refreshes the cache on success.
     ///
     /// - Parameter packageId: A ``SubscriptionPackage/id`` from ``loadOfferings()``. This is
@@ -119,6 +144,24 @@ public protocol SubscriptionUseCase: Sendable {
     /// - Throws: As ``purchase(packageId:)``, and ``SubscriptionError/packageNotFound(_:)`` when
     ///   the offering or the package in it is not there.
     func purchase(packageId: String, inOffering offeringId: String) async throws -> SubscriptionStatus
+
+    /// Presents the system purchase sheet for a package of an offering this package loaded, and
+    /// refreshes the cache on success.
+    ///
+    /// The package is bought the way the offering was found (``SubscriptionOffering/servedBy``),
+    /// so a purchase from a placement's offering is attributed to that placement in RevenueCat. If
+    /// the dashboard has since started serving a different offering there, the package is still
+    /// bought from the offering the customer was shown, without the placement.
+    ///
+    /// The default implementation calls ``purchase(packageId:inOffering:)`` with the offering's
+    /// identifier.
+    ///
+    /// - Parameters:
+    ///   - packageId: A ``SubscriptionPackage/id`` from `offering`.
+    ///   - offering: The offering the paywall was built from.
+    /// - Returns: The entitlement state after the purchase settles.
+    /// - Throws: As ``purchase(packageId:inOffering:)``.
+    func purchase(packageId: String, from offering: SubscriptionOffering) async throws -> SubscriptionStatus
 
     /// Re-applies purchases already tied to the signed-in Apple Account.
     ///
@@ -193,6 +236,21 @@ public protocol SubscriptionUseCase: Sendable {
     ///     current offering. Pass the identifier given to ``loadOffering(id:)`` when the paywall
     ///     was built from it.
     func trackPaywallImpression(source: String, offeringId: String?) async
+
+    /// Tells RevenueCat that a paywall the app draws itself, selling an offering this package
+    /// loaded, was put in front of the customer.
+    ///
+    /// The same as ``trackPaywallImpression(source:offeringId:)``, except that the impression is
+    /// recorded the way the offering was found (``SubscriptionOffering/servedBy``): an offering
+    /// from ``loadOffering(placement:)`` carries its placement, which an identifier alone loses.
+    ///
+    /// The default implementation calls ``trackPaywallImpression(source:offeringId:)`` with the
+    /// offering's identifier.
+    ///
+    /// - Parameters:
+    ///   - source: Where the paywall was shown from. It is sent as RevenueCat's paywall identifier.
+    ///   - offering: The offering the paywall sells.
+    func trackPaywallImpression(source: String, offering: SubscriptionOffering) async
 }
 
 public extension SubscriptionUseCase {
@@ -217,5 +275,17 @@ public extension SubscriptionUseCase {
             throw SubscriptionError.packageNotFound(packageId)
         }
         return try await purchase(packageId: packageId)
+    }
+
+    func loadOffering(placement: String) async throws -> SubscriptionOffering? {
+        try await loadOfferings()
+    }
+
+    func purchase(packageId: String, from offering: SubscriptionOffering) async throws -> SubscriptionStatus {
+        try await purchase(packageId: packageId, inOffering: offering.id)
+    }
+
+    func trackPaywallImpression(source: String, offering: SubscriptionOffering) async {
+        await trackPaywallImpression(source: source, offeringId: offering.id)
     }
 }

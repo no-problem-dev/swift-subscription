@@ -51,18 +51,18 @@ final class RevenueCatRepository: SubscriptionRepository {
         }
     }
 
-    func loadOffering(id: String?) async throws -> SubscriptionOffering? {
+    func loadOffering(_ request: OfferingRequest) async throws -> SubscriptionOffering? {
         guard isConfigured else {
             throw SubscriptionError.notConfigured
         }
 
-        let offering: Offering?
+        let found: (offering: Offering, servedBy: SubscriptionOffering.ServedBy)?
         do {
-            offering = Self.offering(id, in: try await Purchases.shared.offerings())
+            found = Self.offering(request, in: try await Purchases.shared.offerings())
         } catch {
             throw SubscriptionError.networkError(error)
         }
-        guard let offering else { return nil }
+        guard let (offering, servedBy) = found else { return nil }
 
         // Asked only for packages that carry an introductory offer: eligibility is a store
         // round trip, and the answer means nothing for a product without one.
@@ -94,17 +94,24 @@ final class RevenueCatRepository: SubscriptionRepository {
             )
         }
 
-        return SubscriptionOffering(id: offering.identifier, packages: packages)
+        let metadata = SubscriptionOffering.stringMetadata(offering.metadata)
+        return SubscriptionOffering(
+            id: offering.identifier,
+            packages: packages,
+            metadata: metadata.values,
+            droppedMetadataKeys: metadata.dropped,
+            servedBy: servedBy
+        )
     }
 
-    func purchase(packageId: String, offeringId: String?) async throws -> SubscriptionStatus {
+    func purchase(packageId: String, from request: OfferingRequest) async throws -> SubscriptionStatus {
         guard isConfigured else {
             throw SubscriptionError.notConfigured
         }
 
         do {
             let offerings = try await Purchases.shared.offerings()
-            guard let offering = Self.offering(offeringId, in: offerings),
+            guard let offering = Self.offering(request, in: offerings)?.offering,
                   let package = offering.availablePackages.first(where: { $0.identifier == packageId }) else {
                 throw SubscriptionError.packageNotFound(packageId)
             }
@@ -168,14 +175,14 @@ final class RevenueCatRepository: SubscriptionRepository {
         }
     }
 
-    func trackPaywallImpression(paywallId: String, offeringId: String?) async {
+    func trackPaywallImpression(paywallId: String, from request: OfferingRequest) async {
         guard isConfigured else { return }
 
         // The `Offering` is passed rather than its identifier: the SDK derives the placement and
         // targeting context from it, and its identifier-only initialiser is deprecated for losing
         // them. `offerings()` answers from the SDK's cache when the paywall has just loaded it.
         guard let offerings = try? await Purchases.shared.offerings(),
-              let offering = Self.offering(offeringId, in: offerings) else { return }
+              let offering = Self.offering(request, in: offerings)?.offering else { return }
 
         Purchases.shared.trackCustomPaywallImpression(
             CustomPaywallImpressionParams(paywallId: paywallId, offering: offering)
@@ -228,13 +235,17 @@ final class RevenueCatRepository: SubscriptionRepository {
 
     // MARK: - Testable Core
 
-    /// The offering with this identifier, or the current one for `nil`.
-    ///
-    /// An identifier that is not in the dashboard finds nothing. It never falls back to the
-    /// current offering: a paywall asked for one set of products and would be selling another.
-    static func offering(_ identifier: String?, in offerings: Offerings) -> Offering? {
-        guard let identifier else { return offerings.current }
-        return offerings.all[identifier]
+    /// The offering the request names in `offerings`, and how it was found (``OfferingLookup``).
+    static func offering(
+        _ request: OfferingRequest,
+        in offerings: Offerings
+    ) -> (offering: Offering, servedBy: SubscriptionOffering.ServedBy)? {
+        OfferingLookup.offering(
+            for: request,
+            all: offerings.all,
+            current: offerings.current,
+            served: { offerings.currentOffering(forPlacement: $0) }
+        )
     }
 
     /// What a purchase that threw means. A deferred purchase — Ask to Buy — is not a failure.
