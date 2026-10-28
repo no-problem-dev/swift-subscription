@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.5.0] - 2026-10-28
+
 ### Added
 - `SubscriptionUseCase.loadOffering(placement:)`, which loads the offering the dashboard serves at a
   placement, and the current offering when it serves none there. `SubscriptionOffering.servedBy`
