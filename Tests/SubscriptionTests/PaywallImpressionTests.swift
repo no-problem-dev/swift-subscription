@@ -15,7 +15,7 @@ final class PaywallImpressionTests: XCTestCase {
         await useCase.trackPaywallImpression(source: "settings")
 
         let impressions = await mock.impressions
-        XCTAssertEqual(impressions, [.init(paywallId: "settings", offeringId: nil)])
+        XCTAssertEqual(impressions, [.init(paywallId: "settings", request: .current)])
     }
 
     func test_IDを指定したofferingのペイウォールはそのIDで記録する() async {
@@ -25,7 +25,7 @@ final class PaywallImpressionTests: XCTestCase {
         await useCase.trackPaywallImpression(source: "trip_limit", offeringId: "trip")
 
         let impressions = await mock.impressions
-        XCTAssertEqual(impressions, [.init(paywallId: "trip_limit", offeringId: "trip")])
+        XCTAssertEqual(impressions, [.init(paywallId: "trip_limit", request: .identifier("trip"))])
     }
 
     /// Each call is a separate impression on RevenueCat's side, so the use case must neither

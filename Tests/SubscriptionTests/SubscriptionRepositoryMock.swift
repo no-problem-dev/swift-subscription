@@ -12,14 +12,14 @@ actor SubscriptionRepositoryMock: SubscriptionRepository {
     private var checkStatusError: Error?
     private(set) var syncedUserIds: [String] = []
     private(set) var clearUserCallCount = 0
-    private(set) var loadedOfferingIds: [String?] = []
-    private(set) var purchasedFrom: [String?] = []
+    private(set) var loadRequests: [OfferingRequest] = []
+    private(set) var purchasedFrom: [OfferingRequest] = []
     private(set) var impressions: [PaywallImpression] = []
 
     /// One `trackPaywallImpression` call, as the repository received it.
     struct PaywallImpression: Equatable {
         let paywallId: String
-        let offeringId: String?
+        let request: OfferingRequest
     }
 
     /// Pushes a status into the stream, standing in for a change the store would push.
@@ -58,15 +58,15 @@ actor SubscriptionRepositoryMock: SubscriptionRepository {
         return statusToReturn
     }
 
-    func loadOffering(id: String?) async throws -> SubscriptionOffering? {
+    func loadOffering(_ request: OfferingRequest) async throws -> SubscriptionOffering? {
         try throwIfNeeded()
-        loadedOfferingIds.append(id)
+        loadRequests.append(request)
         return offeringToReturn
     }
 
-    func purchase(packageId: String, offeringId: String?) async throws -> SubscriptionStatus {
+    func purchase(packageId: String, from request: OfferingRequest) async throws -> SubscriptionStatus {
         try throwIfNeeded()
-        purchasedFrom.append(offeringId)
+        purchasedFrom.append(request)
         return statusToReturn
     }
 
@@ -85,8 +85,8 @@ actor SubscriptionRepositoryMock: SubscriptionRepository {
         clearUserCallCount += 1
     }
 
-    func trackPaywallImpression(paywallId: String, offeringId: String?) async {
-        impressions.append(PaywallImpression(paywallId: paywallId, offeringId: offeringId))
+    func trackPaywallImpression(paywallId: String, from request: OfferingRequest) async {
+        impressions.append(PaywallImpression(paywallId: paywallId, request: request))
     }
 
     nonisolated func observeSubscriptionChanges() -> AsyncStream<SubscriptionStatus> {

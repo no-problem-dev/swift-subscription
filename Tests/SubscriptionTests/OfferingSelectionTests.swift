@@ -19,8 +19,8 @@ final class OfferingSelectionTests: XCTestCase {
         _ = try await useCase.loadOffering(id: "trip")
         _ = try await useCase.loadOfferings()
 
-        let asked = await mock.loadedOfferingIds
-        XCTAssertEqual(asked, ["trip", nil])
+        let asked = await mock.loadRequests
+        XCTAssertEqual(asked, [.identifier("trip"), .current])
     }
 
     func test_IDを指定したofferingから買うとそのIDで買う() async throws {
@@ -31,7 +31,7 @@ final class OfferingSelectionTests: XCTestCase {
         _ = try await useCase.purchase(packageId: "$rc_annual")
 
         let purchasedFrom = await mock.purchasedFrom
-        XCTAssertEqual(purchasedFrom, ["trip", nil])
+        XCTAssertEqual(purchasedFrom, [.identifier("trip"), .current])
     }
 
     // MARK: - Default implementation

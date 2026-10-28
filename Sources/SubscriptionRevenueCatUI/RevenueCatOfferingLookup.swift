@@ -15,16 +15,24 @@ enum RevenueCatOfferingLookup {
         all: [String: Offering],
         current: Offering?
     ) -> Offering? {
-        guard let identifier else { return current }
-        return all[identifier]
+        OfferingLookup.offering(
+            for: identifier.map(OfferingRequest.identifier) ?? .current,
+            all: all,
+            current: current,
+            served: { _ in nil }
+        )?.offering
     }
 
     /// The offering served at a placement when one is named, and otherwise the offering with
     /// this identifier, or the current one for `nil`.
     ///
+    /// A placement is read as the core reads it (``OfferingLookup``), except that the core's
+    /// fallback to the current offering is declined: a placement the dashboard serves nothing at
+    /// finds nothing here, so the container shows the app's own paywall rather than whatever
+    /// RevenueCat paywall the current offering carries.
+    ///
     /// - Parameter served: What the dashboard serves at a placement: RevenueCat's
-    ///   `Offerings.currentOffering(forPlacement:)`, which already falls back to the current
-    ///   offering for a placement it does not know.
+    ///   `Offerings.currentOffering(forPlacement:)`.
     static func offering(
         _ identifier: String?,
         placement: String?,
@@ -33,7 +41,9 @@ enum RevenueCatOfferingLookup {
         served: (String) -> Offering?
     ) -> Offering? {
         guard let placement else { return offering(identifier, all: all, current: current) }
-        return served(placement)
+        guard let found = OfferingLookup.offering(for: .placement(placement), all: all, current: current, served: served),
+              found.servedBy == .placement(placement) else { return nil }
+        return found.offering
     }
 
     /// What finding `offering` means for choosing a paywall.

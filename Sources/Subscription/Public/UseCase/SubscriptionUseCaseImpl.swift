@@ -101,20 +101,31 @@ public final class SubscriptionUseCaseImpl: SubscriptionUseCase {
     }
 
     public func loadOfferings() async throws -> SubscriptionOffering? {
-        try await repository.loadOffering(id: nil)
+        try await repository.loadOffering(.current)
     }
 
     public func loadOffering(id: String) async throws -> SubscriptionOffering? {
-        try await repository.loadOffering(id: id)
+        try await repository.loadOffering(.identifier(id))
+    }
+
+    public func loadOffering(placement: String) async throws -> SubscriptionOffering? {
+        try await repository.loadOffering(.placement(placement))
     }
 
     public func purchase(packageId: String) async throws -> SubscriptionStatus {
-        let status = try await repository.purchase(packageId: packageId, offeringId: nil)
-        return await state.confirm(status, at: now())
+        try await purchase(packageId: packageId, request: .current)
     }
 
     public func purchase(packageId: String, inOffering offeringId: String) async throws -> SubscriptionStatus {
-        let status = try await repository.purchase(packageId: packageId, offeringId: offeringId)
+        try await purchase(packageId: packageId, request: .identifier(offeringId))
+    }
+
+    public func purchase(packageId: String, from offering: SubscriptionOffering) async throws -> SubscriptionStatus {
+        try await purchase(packageId: packageId, request: .loaded(offering))
+    }
+
+    private func purchase(packageId: String, request: OfferingRequest) async throws -> SubscriptionStatus {
+        let status = try await repository.purchase(packageId: packageId, from: request)
         return await state.confirm(status, at: now())
     }
 
@@ -145,7 +156,11 @@ public final class SubscriptionUseCaseImpl: SubscriptionUseCase {
     }
 
     public func trackPaywallImpression(source: String, offeringId: String?) async {
-        await repository.trackPaywallImpression(paywallId: source, offeringId: offeringId)
+        await repository.trackPaywallImpression(paywallId: source, from: offeringId.map(OfferingRequest.identifier) ?? .current)
+    }
+
+    public func trackPaywallImpression(source: String, offering: SubscriptionOffering) async {
+        await repository.trackPaywallImpression(paywallId: source, from: .loaded(offering))
     }
 
 }

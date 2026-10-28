@@ -174,8 +174,9 @@ RevenueCat counts impressions of its own paywalls; one the app draws is invisibl
 Encounter chart until the app says it was shown. Call
 `trackPaywallImpression(source:)` once per presentation, when the paywall is on screen, with
 where it was shown from — `source` becomes RevenueCat's paywall identifier, so the chart splits by
-it. A paywall that sells a named offering passes `offeringId:` as well, so the impression carries
-that offering's placement and targeting:
+it. A paywall that sells a named offering passes `offeringId:` as well, and one built from an
+offering the package loaded passes the offering itself (`trackPaywallImpression(source:offering:)`),
+so the impression carries the placement it was served at:
 
 ```swift
 Task { await subscriptionUseCase.trackPaywallImpression(source: "settings") }
@@ -183,6 +184,25 @@ Task { await subscriptionUseCase.trackPaywallImpression(source: "settings") }
 
 Each call is a separate impression, so guard it against a second `onAppear` for the same
 presentation. RevenueCat paywalls (`RevenueCatPaywallView`) are counted by the SDK and need no call.
+
+### Selling a different offering at each entry point
+
+Name the place a paywall opens as a placement in the RevenueCat dashboard, and load what the
+dashboard serves there. A placement the dashboard serves nothing at answers with the current
+offering, so the app can ship before the dashboard is set up:
+
+```swift
+guard let offering = try await subscriptionUseCase.loadOffering(placement: "onboarding") else { return }
+offering.servedBy            // .placement("onboarding"), or .current when nothing is served there
+offering.metadata["appeal"]  // the dashboard's metadata, string values only
+try await subscriptionUseCase.purchase(packageId: offering.packages[0].id, from: offering)
+await subscriptionUseCase.trackPaywallImpression(source: "onboarding", offering: offering)
+```
+
+Buying and recording an impression with the offering itself, rather than its identifier, carries
+the placement to RevenueCat. `metadata` keeps only string values; the keys of numbers, booleans and
+objects are in `droppedMetadataKeys`, so a dashboard entry the app cannot read can be reported
+rather than silently ignored.
 
 ## Documentation
 

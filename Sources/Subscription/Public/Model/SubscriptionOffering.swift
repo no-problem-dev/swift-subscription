@@ -203,9 +203,25 @@ public struct SubscriptionPackage: Sendable, Identifiable {
 ///
 /// Which offering is current is a server-side decision, so the products can change without
 /// an app release. A paywall that needs a particular offering rather than the current one asks
-/// for it by identifier with ``SubscriptionUseCase/loadOffering(id:)``. Build the paywall from whatever `packages` contains rather than assuming
-/// a fixed monthly-and-annual pair.
+/// for it by identifier with ``SubscriptionUseCase/loadOffering(id:)``, or for the one the
+/// dashboard serves where the paywall opens with ``SubscriptionUseCase/loadOffering(placement:)``.
+/// Build the paywall from whatever `packages` contains rather than assuming a fixed
+/// monthly-and-annual pair.
 public struct SubscriptionOffering: Sendable, Identifiable {
+    /// How an offering was found: which question the dashboard answered with it.
+    ///
+    /// Buying from an offering and recording its impression go back to the store the same way,
+    /// so a purchase made from a placement's offering carries that placement in RevenueCat.
+    public enum ServedBy: Sendable, Equatable {
+        /// The offering the dashboard marks current. Also what ``SubscriptionUseCase/loadOffering(placement:)``
+        /// answers with when the dashboard serves nothing at the placement.
+        case current
+        /// Asked for by its identifier with ``SubscriptionUseCase/loadOffering(id:)``.
+        case identifier
+        /// Served at this placement by the dashboard's placements and targeting.
+        case placement(String)
+    }
+
     /// The offering's dashboard identifier, useful for attributing conversions to a paywall
     /// experiment.
     public let id: String
@@ -216,16 +232,66 @@ public struct SubscriptionOffering: Sendable, Identifiable {
     /// nothing to sell.
     public let packages: [SubscriptionPackage]
 
+    /// The offering's metadata from the dashboard, keeping only the values that are strings.
+    ///
+    /// Metadata is a remote switch, so it is read as text the app compares against values it
+    /// already knows, never as copy to show. A value of any other JSON type — a number, a
+    /// boolean, an object — is left out rather than converted, and its key is listed in
+    /// ``droppedMetadataKeys`` so the app can report a dashboard entry it cannot read.
+    public let metadata: [String: String]
+
+    /// The metadata keys whose values were not strings and are therefore missing from ``metadata``.
+    public let droppedMetadataKeys: Set<String>
+
+    /// How the offering was found.
+    public let servedBy: ServedBy
+
     /// Creates an offering.
     ///
     /// Provided for tests and previews; real values come from
-    /// ``SubscriptionUseCase/loadOfferings()``.
+    /// ``SubscriptionUseCase/loadOfferings()``. The offering has no metadata and is reported as
+    /// the current one.
     ///
     /// - Parameters:
     ///   - id: The offering's dashboard identifier.
     ///   - packages: The products to display.
     public init(id: String, packages: [SubscriptionPackage]) {
+        self.init(id: id, packages: packages, metadata: [:], servedBy: .current)
+    }
+
+    /// Creates an offering with metadata, as the dashboard would return it.
+    ///
+    /// - Parameters:
+    ///   - id: The offering's dashboard identifier.
+    ///   - packages: The products to display.
+    ///   - metadata: The string values of the offering's metadata.
+    ///   - droppedMetadataKeys: The keys whose values were not strings.
+    ///   - servedBy: How the offering was found.
+    public init(
+        id: String,
+        packages: [SubscriptionPackage],
+        metadata: [String: String],
+        droppedMetadataKeys: Set<String> = [],
+        servedBy: ServedBy
+    ) {
         self.id = id
         self.packages = packages
+        self.metadata = metadata
+        self.droppedMetadataKeys = droppedMetadataKeys
+        self.servedBy = servedBy
+    }
+
+    /// Splits the dashboard's metadata into its string values and the keys of everything else.
+    static func stringMetadata(_ raw: [String: Any]) -> (values: [String: String], dropped: Set<String>) {
+        var values: [String: String] = [:]
+        var dropped: Set<String> = []
+        for (key, value) in raw {
+            if let text = value as? String {
+                values[key] = text
+            } else {
+                dropped.insert(key)
+            }
+        }
+        return (values, dropped)
     }
 }

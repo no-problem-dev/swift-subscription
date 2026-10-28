@@ -75,10 +75,14 @@ sandbox account.
 ### Presenting a paywall
 
 - ``SubscriptionOffering``
+- ``SubscriptionOffering/ServedBy``
+- ``SubscriptionUseCase/loadOffering(placement:)``
+- ``SubscriptionUseCase/purchase(packageId:from:)``
 - ``SubscriptionPackage``
 - ``PackageDuration``
 - ``IntroductoryOffer``
 - ``SubscriptionUseCase/trackPaywallImpression(source:offeringId:)``
+- ``SubscriptionUseCase/trackPaywallImpression(source:offering:)``
 
 ### SwiftUI integration
 

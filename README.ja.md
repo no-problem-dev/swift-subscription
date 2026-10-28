@@ -166,7 +166,8 @@ RevenueCat は自分のペイウォールの表示は自分で数えるが、ア
 まで Paywall Encounter のチャートに載らない。表示ごとに 1 回、画面に出たところで
 `trackPaywallImpression(source:)` を呼ぶ。`source` は出した場所で、RevenueCat のペイウォール ID
 として送られ、チャートをこれで分けられる。名前を指定した offering を売るペイウォールは
-`offeringId:` も渡す。その offering の placement とターゲティングが表示に付く。
+`offeringId:` も渡す。パッケージで読んだ offering を売るペイウォールは offering そのものを渡す
+（`trackPaywallImpression(source:offering:)`）。配られた placement が表示に付く。
 
 ```swift
 Task { await subscriptionUseCase.trackPaywallImpression(source: "settings") }
@@ -174,6 +175,24 @@ Task { await subscriptionUseCase.trackPaywallImpression(source: "settings") }
 
 呼ぶたびに別の表示として数えられるので、同じ表示で `onAppear` が 2 回走っても 1 回にとどめる。
 RevenueCat のペイウォール（`RevenueCatPaywallView`）は SDK が数えるので呼ばなくてよい。
+
+### 入口ごとに違う offering を売る
+
+ペイウォールを開く場所を RevenueCat のダッシュボードで placement として名付け、そこに配られた offering
+を読む。何も配られていない placement は current の offering を返すので、ダッシュボードを整える前に
+出しても壊れない。
+
+```swift
+guard let offering = try await subscriptionUseCase.loadOffering(placement: "onboarding") else { return }
+offering.servedBy            // .placement("onboarding")。何も配られていなければ .current
+offering.metadata["appeal"]  // ダッシュボードの metadata（文字列の値だけ）
+try await subscriptionUseCase.purchase(packageId: offering.packages[0].id, from: offering)
+await subscriptionUseCase.trackPaywallImpression(source: "onboarding", offering: offering)
+```
+
+ID でなく offering そのもので買い、表示を記録すると、placement が RevenueCat に届く。`metadata` は
+文字列の値だけを持つ。数・真偽値・オブジェクトの鍵は `droppedMetadataKeys` に入るので、読めない設定を
+黙って捨てずに知らせられる。
 
 ## ドキュメント
 
