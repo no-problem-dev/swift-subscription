@@ -90,6 +90,8 @@ public struct PreviewSubscriptionUseCase: SubscriptionUseCase {
 
     public func restorePurchases() async throws -> SubscriptionStatus { status }
 
+    public func syncPurchases() async throws -> SubscriptionStatus { status }
+
     public func syncUser(userId: String) async throws {}
 
     public func clearUser() async throws {}

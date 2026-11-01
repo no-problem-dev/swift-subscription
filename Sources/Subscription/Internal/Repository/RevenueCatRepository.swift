@@ -143,6 +143,19 @@ final class RevenueCatRepository: SubscriptionRepository {
         }
     }
 
+    func syncPurchases() async throws -> SubscriptionStatus {
+        guard isConfigured else {
+            throw SubscriptionError.notConfigured
+        }
+
+        do {
+            let customerInfo = try await Purchases.shared.syncPurchases()
+            return extractSubscriptionStatus(from: customerInfo)
+        } catch {
+            throw SubscriptionError.userSyncFailed(error)
+        }
+    }
+
     func syncUser(userId: String) async throws {
         guard isConfigured else {
             throw SubscriptionError.notConfigured

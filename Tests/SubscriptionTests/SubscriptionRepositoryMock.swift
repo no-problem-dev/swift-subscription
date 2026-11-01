@@ -12,6 +12,7 @@ actor SubscriptionRepositoryMock: SubscriptionRepository {
     private var checkStatusError: Error?
     private(set) var syncedUserIds: [String] = []
     private(set) var clearUserCallCount = 0
+    private(set) var syncPurchasesCallCount = 0
     private(set) var loadRequests: [OfferingRequest] = []
     private(set) var purchasedFrom: [OfferingRequest] = []
     private(set) var impressions: [PaywallImpression] = []
@@ -72,6 +73,12 @@ actor SubscriptionRepositoryMock: SubscriptionRepository {
 
     func restorePurchases() async throws -> SubscriptionStatus {
         try throwIfNeeded()
+        return statusToReturn
+    }
+
+    func syncPurchases() async throws -> SubscriptionStatus {
+        try throwIfNeeded()
+        syncPurchasesCallCount += 1
         return statusToReturn
     }
 

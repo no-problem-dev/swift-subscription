@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `SubscriptionUseCase.syncPurchases()`, which moves the purchases on this device's Apple Account
+  to the identity signed in now (`Purchases.syncPurchases`) without any prompt, refreshes the
+  cache and returns the resulting `SubscriptionStatus`. `syncUser(userId:)` only swaps the
+  identity, so a trial started under the previous identity stayed there after signing in on
+  another device until the customer pressed "Restore Purchases". Call it after the `syncUser`
+  of an explicit sign-in that changed the user identifier, never on launch: RevenueCat's default
+  transfer behaviour would let a throwaway account made after a reinstall take the purchases.
+  A rejected sync throws `SubscriptionError.userSyncFailed`. The protocol's default
+  implementation answers with `checkSubscriptionStatus()`, so an existing conformance keeps
+  compiling; `PreviewSubscriptionUseCase` answers with its status.
+
 ## [3.5.0] - 2026-10-28
 
 ### Added

@@ -134,6 +134,11 @@ public final class SubscriptionUseCaseImpl: SubscriptionUseCase {
         return await state.confirm(status, at: now())
     }
 
+    public func syncPurchases() async throws -> SubscriptionStatus {
+        let status = try await repository.syncPurchases()
+        return await state.confirm(status, at: now())
+    }
+
     public func syncUser(userId: String) async throws {
         try await repository.syncUser(userId: userId)
 

@@ -175,11 +175,40 @@ public protocol SubscriptionUseCase: Sendable {
     /// - Throws: ``SubscriptionError/restoreFailed(_:)`` if the store rejects the request.
     func restorePurchases() async throws -> SubscriptionStatus
 
+    /// Moves the purchases already on this device's Apple Account to the identity signed in
+    /// now, without showing anything, and refreshes the cache.
+    ///
+    /// ``syncUser(userId:)`` only swaps the billing identity. A purchase made under the identity
+    /// this device was using before — an anonymous one, or another account — stays there, so a
+    /// customer who starts a trial and then signs in on a second device does not see it until
+    /// they press "Restore Purchases". Call this right after a ``syncUser(userId:)`` that the
+    /// customer caused by signing in, so what they bought follows them to the account.
+    ///
+    /// - Important: Call it only when the customer explicitly signed in and the user identifier
+    ///   changed. **Never on launch, and never from the ``syncUser(userId:)`` a launch makes to
+    ///   restore a session.** RevenueCat's default transfer behaviour moves the purchases to the
+    ///   identity that syncs them, so syncing on every launch lets a throwaway account — one an
+    ///   app creates after a reinstall — take the purchases away from the account that owns them.
+    ///
+    /// Unlike ``restorePurchases()`` it never asks the customer to sign in to the App Store,
+    /// which is what makes it safe to run without a button press. Like it, returning normally
+    /// is not evidence of an entitlement: with nothing to move, it returns `.inactive`.
+    ///
+    /// The default implementation answers with ``checkSubscriptionStatus()``, which is right for
+    /// a stand-in that reaches no store.
+    ///
+    /// - Returns: The entitlement state of the signed-in identity after the purchases moved.
+    /// - Throws: ``SubscriptionError/userSyncFailed(_:)`` if the store rejects the sync, leaving
+    ///   the purchases with the previous identity, or ``SubscriptionError/notConfigured`` if the
+    ///   API key was empty at init.
+    func syncPurchases() async throws -> SubscriptionStatus
+
     /// Binds subsequent purchases to an app-level user identifier and refreshes the cache.
     ///
     /// Call this after the customer signs in. Until it is called, purchases are attributed
     /// to an anonymous identity, so an entitlement bought before sign-in does not follow the
-    /// account to another device.
+    /// account to another device. It does not move purchases already made under the previous
+    /// identity; when the customer signed in by hand, follow it with ``syncPurchases()``.
     ///
     /// The entitlement is discarded — from memory and from the ``EntitlementCache`` — as soon as
     /// the identity swaps, and refilled by the refresh that follows. A throwing call therefore
@@ -264,6 +293,11 @@ public extension SubscriptionUseCase {
     }
 
     func trackPaywallImpression(source: String, offeringId: String?) async {}
+
+    func syncPurchases() async throws -> SubscriptionStatus {
+        try await checkSubscriptionStatus()
+    }
+
     func loadOffering(id: String) async throws -> SubscriptionOffering? {
         guard let current = try await loadOfferings(), current.id == id else { return nil }
         return current
