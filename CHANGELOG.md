@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Changed
+- Corrected the documentation of `syncPurchases()`, which 3.6.0 described as moving purchases
+  from the previous identity to the one signed in. It does not: RevenueCat sends a sync as a
+  restore only while the current identity is anonymous, so after `syncUser(userId:)` a receipt
+  that belongs to another app user identifier stays with it. To bring a purchase over after an
+  explicit sign-in that changed the identifier, call `restorePurchases()` when the entitlement is
+  not active — never on launch. The behaviour is unchanged.
+
 ## [3.6.0] - 2026-11-01
 
 ### Added
