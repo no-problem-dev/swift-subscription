@@ -175,32 +175,30 @@ public protocol SubscriptionUseCase: Sendable {
     /// - Throws: ``SubscriptionError/restoreFailed(_:)`` if the store rejects the request.
     func restorePurchases() async throws -> SubscriptionStatus
 
-    /// Moves the purchases already on this device's Apple Account to the identity signed in
+    /// Sends the purchases on this device's Apple Account to the store for the identity signed in
     /// now, without showing anything, and refreshes the cache.
     ///
-    /// ``syncUser(userId:)`` only swaps the billing identity. A purchase made under the identity
-    /// this device was using before — an anonymous one, or another account — stays there, so a
-    /// customer who starts a trial and then signs in on a second device does not see it until
-    /// they press "Restore Purchases". Call this right after a ``syncUser(userId:)`` that the
-    /// customer caused by signing in, so what they bought follows them to the account.
+    /// - Important: **This does not take purchases over from another identity.** RevenueCat sends a
+    ///   sync as a restore only while the current identity is anonymous; once
+    ///   ``syncUser(userId:)`` has signed someone in, a receipt that already belongs to another
+    ///   app user identifier stays with it. To bring a purchase made under the previous identity —
+    ///   a trial started before signing in on a second device — over to the account just signed in
+    ///   to, call ``restorePurchases()`` after the ``syncUser(userId:)`` of an explicit sign-in that
+    ///   changed the user identifier, and only when the entitlement is not already active.
+    ///   Never do either on launch: when several identities share one Apple Account, each device
+    ///   would take the purchases back from the others.
     ///
-    /// - Important: Call it only when the customer explicitly signed in and the user identifier
-    ///   changed. **Never on launch, and never from the ``syncUser(userId:)`` a launch makes to
-    ///   restore a session.** RevenueCat's default transfer behaviour moves the purchases to the
-    ///   identity that syncs them, so syncing on every launch lets a throwaway account — one an
-    ///   app creates after a reinstall — take the purchases away from the account that owns them.
-    ///
-    /// Unlike ``restorePurchases()`` it never asks the customer to sign in to the App Store,
-    /// which is what makes it safe to run without a button press. Like it, returning normally
-    /// is not evidence of an entitlement: with nothing to move, it returns `.inactive`.
+    /// What it is for is attributing purchases this identity can already claim — ones made while
+    /// it was anonymous, or under it on another device — without the App Store prompt a restore
+    /// can raise. Returning normally is not evidence of an entitlement: with nothing to send, it
+    /// returns `.inactive`.
     ///
     /// The default implementation answers with ``checkSubscriptionStatus()``, which is right for
     /// a stand-in that reaches no store.
     ///
-    /// - Returns: The entitlement state of the signed-in identity after the purchases moved.
-    /// - Throws: ``SubscriptionError/userSyncFailed(_:)`` if the store rejects the sync, leaving
-    ///   the purchases with the previous identity, or ``SubscriptionError/notConfigured`` if the
-    ///   API key was empty at init.
+    /// - Returns: The entitlement state of the signed-in identity after the sync.
+    /// - Throws: ``SubscriptionError/userSyncFailed(_:)`` if the store rejects the sync, or
+    ///   ``SubscriptionError/notConfigured`` if the API key was empty at init.
     func syncPurchases() async throws -> SubscriptionStatus
 
     /// Binds subsequent purchases to an app-level user identifier and refreshes the cache.
@@ -208,7 +206,8 @@ public protocol SubscriptionUseCase: Sendable {
     /// Call this after the customer signs in. Until it is called, purchases are attributed
     /// to an anonymous identity, so an entitlement bought before sign-in does not follow the
     /// account to another device. It does not move purchases already made under the previous
-    /// identity; when the customer signed in by hand, follow it with ``syncPurchases()``.
+    /// identity: after an explicit sign-in that changed the identifier, call
+    /// ``restorePurchases()`` when the entitlement is not active, and never on launch.
     ///
     /// The entitlement is discarded — from memory and from the ``EntitlementCache`` — as soon as
     /// the identity swaps, and refilled by the refresh that follows. A throwing call therefore

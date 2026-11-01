@@ -1,8 +1,8 @@
 import XCTest
 @testable import Subscription
 
-/// Covers `syncPurchases()`, which moves the purchases on the Apple Account to the identity
-/// signed in now, and the rule that only an explicit sign-in may trigger it.
+/// Covers `syncPurchases()`, which sends the purchases on the Apple Account for the identity
+/// signed in now, and that `syncUser` never syncs or restores on its own.
 final class SyncPurchasesTests: XCTestCase {
     private static let activeStatus = SubscriptionStatus(
         isActive: true,
@@ -31,9 +31,9 @@ final class SyncPurchasesTests: XCTestCase {
         XCTAssertEqual(calls, 1)
     }
 
-    /// The sign-in that leaves a second device without the trial it bought on the first: the
-    /// identity swaps, the new identity owns nothing yet, and the sync moves the purchase over.
-    func test_サインイン後に同期すると前の身元の購入が新しい身元に付く() async throws {
+    /// The new identity's entitlement, as the store reports it after the sync, replaces what was
+    /// read right after the swap.
+    func test_サインイン後の同期で読んだ権利がキャッシュに入る() async throws {
         let mock = SubscriptionRepositoryMock()
         let useCase = Self.makeUseCase(repository: mock)
 
@@ -49,9 +49,9 @@ final class SyncPurchasesTests: XCTestCase {
         XCTAssertTrue(cached.isActive)
     }
 
-    /// `syncUser` runs on every launch to restore a session. If it synced purchases too, a
-    /// throwaway account made after a reinstall would take them from the account that owns them.
-    func test_syncUserは購入を同期しない() async throws {
+    /// `syncUser` runs on every launch to restore a session. Syncing or restoring from there would
+    /// let devices sharing an Apple Account take the purchases from one another.
+    func test_syncUserは購入を同期も復元もしない() async throws {
         let mock = SubscriptionRepositoryMock()
         let useCase = Self.makeUseCase(repository: mock)
 
@@ -60,6 +60,8 @@ final class SyncPurchasesTests: XCTestCase {
 
         let calls = await mock.syncPurchasesCallCount
         XCTAssertEqual(calls, 0)
+        let restores = await mock.restoreCallCount
+        XCTAssertEqual(restores, 0)
     }
 
     func test_syncPurchasesが失敗しても状態キャッシュは変わらない() async throws {

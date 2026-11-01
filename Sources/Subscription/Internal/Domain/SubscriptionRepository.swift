@@ -19,8 +19,9 @@ protocol SubscriptionRepository: Sendable {
     /// Re-applies purchases on the Apple Account; resolves to `.inactive` when there are none.
     func restorePurchases() async throws -> SubscriptionStatus
 
-    /// Moves the purchases on the Apple Account to the current billing identity without any
-    /// system prompt, and reports the entitlement afterwards.
+    /// Sends the purchases on the Apple Account for the current billing identity without any
+    /// system prompt, and reports the entitlement afterwards. Takes nothing over from another
+    /// named identity (``restorePurchases()`` does).
     func syncPurchases() async throws -> SubscriptionStatus
 
     /// Attaches the billing identity to an app-level user identifier.
