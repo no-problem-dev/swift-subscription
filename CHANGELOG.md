@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.6.1] - 2026-11-01
+
 ### Changed
 - Corrected the documentation of `syncPurchases()`, which 3.6.0 described as moving purchases
   from the previous identity to the one signed in. It does not: RevenueCat sends a sync as a
