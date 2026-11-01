@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.6.0] - 2026-11-01
+
 ### Added
 - `SubscriptionUseCase.syncPurchases()`, which moves the purchases on this device's Apple Account
   to the identity signed in now (`Purchases.syncPurchases`) without any prompt, refreshes the
