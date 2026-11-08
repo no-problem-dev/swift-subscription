@@ -87,11 +87,10 @@ showing the RevenueCat paywall, and the container that switches between the two,
 Every app ends its onboarding on a paywall the customer can close. Whether it appears is
 `OnboardingPaywallDecision`'s call, in `Subscription`: not for someone already entitled, not when
 the offering's metadata sets `onboarding_paywall` to `off`, and not when there is no price to show.
-When it does appear, ``OnboardingPaywallStep`` wraps the app's own paywall in the parts that must
-not differ between apps: a × in the top-leading corner from the first frame, "Continue for free"
-beneath the paywall, one `onFinish` for closing, continuing, buying and restoring alike, and
-`source=onboarding` on the `paywall_shown` and `paywall_closed` it reports. None of them has a
-parameter to turn it off or move it.
+When it does appear, `OnboardingPaywallStep` wraps the app's own paywall in the parts that must
+not differ between apps. The step lives in the `SubscriptionOnboarding` product, which has no
+RevenueCat so that an app's presentation layer can use it; `SubscriptionUI` re-exports it, and adds
+`purchased(_:)` taking a `SubscriptionPackage`.
 
 ## Topics
 
@@ -117,14 +116,6 @@ parameter to turn it off or move it.
 - ``PaywallOfferingLookup``
 - ``PaywallChoice``
 - ``PaywallHandlers``
-
-### The paywall at the end of onboarding
-
-- ``OnboardingPaywallStep``
-- ``OnboardingPaywallContext``
-- ``OnboardingPaywallExit``
-- ``OnboardingPaywallEvent``
-- ``OnboardingPaywallLabels``
 
 ### Previews
 

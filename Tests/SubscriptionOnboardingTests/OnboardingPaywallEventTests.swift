@@ -1,7 +1,7 @@
 import Foundation
-import Subscription
+import SubscriptionPlan
 import Testing
-@testable import SubscriptionUI
+@testable import SubscriptionOnboarding
 
 @Suite("オンボーディングの最後のペイウォールの出口と計測")
 struct OnboardingPaywallEventTests {
@@ -83,9 +83,65 @@ struct OnboardingPaywallEventTests {
         #expect(OnboardingPaywallEvent.openSeconds(from: nil, to: shown) == 0)
     }
 
-    @Test("日本語の文言は「無料のまま続ける」")
+    @Test("日本語の文言は「無料のまま続ける」と「購入を復元」")
     func japaneseLabels() {
         #expect(OnboardingPaywallLabels.japanese.continueFree == "無料のまま続ける")
         #expect(OnboardingPaywallLabels.japanese.close == "閉じる")
+        #expect(OnboardingPaywallLabels.japanese.restore == "購入を復元")
+        #expect(OnboardingPaywallLabels().restore == "Restore Purchases")
+    }
+
+    @Test("買わずに閉じた paywall_closed は、選んでいたプランを product に持つ")
+    func closeCarriesSelectedPlan() {
+        let byButton = OnboardingPaywallClose(paywallId: "0a1b2c3d", exit: .closeButton, openSeconds: 12, selectedPlan: .monthly)
+        #expect(byButton.name == "paywall_closed")
+        #expect(byButton.parameters == [
+            "source": "onboarding", "pw_id": "0a1b2c3d",
+            "result": "dismissed", "via": "close_button", "open_s": "12", "product": "monthly"
+        ])
+        let free = OnboardingPaywallClose(paywallId: "0a1b2c3d", exit: .continueFree, openSeconds: 3, selectedPlan: .annual)
+        #expect(free.product == "yearly")
+        #expect(free.event == .closed(paywallId: "0a1b2c3d", exit: .continueFree, openSeconds: 3))
+        #expect(free.event.parameters["product"] == nil)
+    }
+
+    @Test("product は買ったプランが選んでいたプランに勝つ。復元・未報告・知らない長さは無し")
+    func closeProductRules() {
+        #expect(OnboardingPaywallClose(paywallId: "a", exit: .purchased(.annual), openSeconds: 1, selectedPlan: .monthly).product == "yearly")
+        #expect(OnboardingPaywallClose(paywallId: "a", exit: .restored, openSeconds: 1, selectedPlan: .monthly).product == nil)
+        #expect(OnboardingPaywallClose(paywallId: "a", exit: .closeButton, openSeconds: 1, selectedPlan: nil).product == nil)
+        #expect(OnboardingPaywallClose(paywallId: "a", exit: .closeButton, openSeconds: 1, selectedPlan: .unknown).product == nil)
+        #expect(OnboardingPaywallClose(paywallId: "a", exit: .restored, openSeconds: 1, selectedPlan: .monthly).parameters["product"] == nil)
+    }
+
+    @Test("context は期間だけで買った・選んだを段に渡す")
+    @MainActor
+    func contextTakesDurations() {
+        var exits: [OnboardingPaywallExit] = []
+        var selections: [PackageDuration?] = []
+        let context = OnboardingPaywallContext(
+            paywallId: "0a1b2c3d",
+            finish: { exits.append($0) },
+            working: { _ in },
+            selection: { selections.append($0) }
+        )
+        context.select(.monthly)
+        context.select(nil)
+        context.purchased(.annual)
+        #expect(selections == [.monthly, nil])
+        #expect(exits == [.purchased(.annual)])
+        #expect(context.source == "onboarding")
+    }
+
+    @Test("ボタンの識別子は決まった値で、互いに違う")
+    func identifiers() {
+        #expect(OnboardingPaywallIdentifier.close == "onboarding_paywall.close")
+        #expect(OnboardingPaywallIdentifier.continueFree == "onboarding_paywall.continue_free")
+        #expect(OnboardingPaywallIdentifier.restore == "onboarding_paywall.restore")
+    }
+
+    @Test("paywall_shown を数えるまでの時間は impression と同じ1秒")
+    func impressionDwell() {
+        #expect(OnboardingPaywallEvent.impressionDwell == .seconds(1))
     }
 }

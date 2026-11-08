@@ -218,31 +218,53 @@ let decision = OnboardingPaywallDecision.decide(offering: offering, status: stat
 ```
 
 Any value other than `off`, or no entry, leaves the paywall on, so a typo in the dashboard cannot
-take it away. When it is shown, wrap the app's own paywall in `OnboardingPaywallStep`
-(`SubscriptionUI`). The step draws the × in the top-leading corner and "Continue for free" beneath
-the paywall, always, and ends closing, continuing, buying and restoring in one `onFinish`:
+take it away. When it is shown, wrap the app's own paywall in `OnboardingPaywallStep`. It is in
+the `SubscriptionOnboarding` product, which depends on SwiftUI only and not on RevenueCat, so a
+presentation layer that does not import RevenueCat can draw and test it; `SubscriptionUI`
+re-exports it. The step draws the × in the top-leading corner, "Restore Purchases" at the trailing
+end of the same row when given `restore`, and "Continue for free" beneath the paywall, always, and
+ends closing, continuing, buying and restoring in one `onFinish`:
 
 ```swift
+import SubscriptionOnboarding
+
 OnboardingPaywallStep(
-    labels: .japanese,
-    onEvent: { event in analytics.send(event.name, event.parameters) },
-    onFinish: { exit in router.showHome(askForNotifications: exit.isEntitled) }
+    labels: .japanese,                    // ×, 購入を復元, 無料のまま続ける
+    impression: .byApp,                   // the app sends paywall_shown; .afterDwell (default) lets the step
+    onClose: { close in analytics.send(close.name, close.parameters) },
+    onFinish: { exit in router.showHome(askForNotifications: exit.isEntitled) },
+    restore: { await premium.restore() }  // true when the customer is entitled now
 ) { context in
     MyPaywall(
-        offering: offering,
         paywallId: context.paywallId,     // the pw_id for the paywall's own paywall_* events
+        onSelect: context.select,         // the plan selected now (PackageDuration?)
         onWorking: context.setWorking,    // disables the ways out while a purchase is in flight
-        onPurchased: context.purchased,   // with the SubscriptionPackage that was bought
-        onRestored: context.restored
+        onPurchased: context.purchased    // the length of the plan bought (PackageDuration)
     )
 }
 ```
 
-`onEvent` receives `paywall_shown` and `paywall_closed` with `source=onboarding`, one `pw_id`,
-and, on closing, `result`, `via` (`close_button`, `continue_free`, or `auto` after a purchase or a
-restore), `product` and `open_s`, named as in the shared event catalog. The package depends on no
-analytics SDK. The step has no parameter for the position of the × or for leaving out "Continue for
-free".
+`onEvent` receives `paywall_shown` and `paywall_closed` with `source=onboarding` and one `pw_id`,
+named as in the shared event catalog. `paywall_shown` is an impression: by default the step sends
+it once the paywall has been on screen for a second, and with `impression: .byApp` it sends none,
+so the app can count it with its own impression tracking and `context.paywallId`. On closing,
+`paywall_closed` has `result`, `via` (`close_button`, `continue_free`, or `auto` after a purchase or
+a restore) and `open_s`. Its `product` is the plan bought; `onClose` hands the same close with the
+plan last passed to `context.select`, so a close without a purchase names the plan that was
+selected. Send `paywall_closed` from `onClose` or from `onEvent`, not both. The package depends on
+no analytics SDK.
+
+When `restore` answers `false`, the step stays open: say on the paywall that nothing was found.
+The step has no parameter for the position of the ×, of "Restore Purchases", or for leaving out
+"Continue for free".
+
+Its buttons carry fixed accessibility identifiers for UI tests, in every language:
+
+| Button | Identifier (`OnboardingPaywallIdentifier`) |
+|---|---|
+| × | `onboarding_paywall.close` |
+| Restore Purchases | `onboarding_paywall.restore` |
+| Continue for free | `onboarding_paywall.continue_free` |
 
 ## Documentation
 

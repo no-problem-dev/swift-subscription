@@ -1,5 +1,5 @@
 import Foundation
-import Subscription
+import SubscriptionPlan
 
 /// How the customer left the paywall at the end of onboarding.
 ///
@@ -52,11 +52,16 @@ public enum OnboardingPaywallExit: Sendable, Hashable {
     /// (`PackageDuration/unknown`), rather than a guess.
     public var product: String? {
         guard case .purchased(let duration) = self else { return nil }
+        return Self.product(of: duration)
+    }
+
+    /// The catalog's `PlanPeriod` for a plan's length, or `nil` for one it does not name.
+    static func product(of duration: PackageDuration) -> String? {
         switch duration {
-        case .annual: return "yearly"
-        case .monthly: return "monthly"
-        case .lifetime: return "lifetime"
-        case .unknown: return nil
+        case .annual: "yearly"
+        case .monthly: "monthly"
+        case .lifetime: "lifetime"
+        case .unknown: nil
         }
     }
 }

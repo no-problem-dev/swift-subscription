@@ -15,6 +15,12 @@ let package = Package(
             name: "Subscription",
             targets: ["Subscription"]
         ),
+        // The paywall at the end of onboarding: SwiftUI only, no RevenueCat, so an app's
+        // presentation layer, which does not import RevenueCat, can draw it and test it.
+        .library(
+            name: "SubscriptionOnboarding",
+            targets: ["SubscriptionOnboarding"]
+        ),
         // The paywall skeleton, SwiftUI and system frameworks only. A separate product so an
         // app that draws its own paywall does not carry it.
         .library(
@@ -32,12 +38,18 @@ let package = Package(
     dependencies: [
         // RevenueCat SDK
         .package(url: "https://github.com/RevenueCat/purchases-ios.git", from: "5.90.0"),
-        .package(url: "https://github.com/swiftlang/swift-docc-plugin", from: "1.4.0")
     ],
     targets: [
+        // The length of a plan, with no dependency, so the onboarding step can name it without
+        // RevenueCat. `Subscription` re-exports it.
+        .target(
+            name: "SubscriptionPlan",
+            path: "Sources/SubscriptionPlan"
+        ),
         .target(
             name: "Subscription",
             dependencies: [
+                "SubscriptionPlan",
                 .product(name: "RevenueCat", package: "purchases-ios")
             ],
             path: "Sources/Subscription"
@@ -45,8 +57,13 @@ let package = Package(
         // No design system and no third-party dependency: the paywall's structure is what
         // this target owns, and the look belongs to the app.
         .target(
+            name: "SubscriptionOnboarding",
+            dependencies: ["SubscriptionPlan"],
+            path: "Sources/SubscriptionOnboarding"
+        ),
+        .target(
             name: "SubscriptionUI",
-            dependencies: ["Subscription"],
+            dependencies: ["Subscription", "SubscriptionOnboarding"],
             path: "Sources/SubscriptionUI"
         ),
         .target(
@@ -65,8 +82,13 @@ let package = Package(
             path: "Tests/SubscriptionTests"
         ),
         .testTarget(
+            name: "SubscriptionOnboardingTests",
+            dependencies: ["SubscriptionOnboarding"],
+            path: "Tests/SubscriptionOnboardingTests"
+        ),
+        .testTarget(
             name: "SubscriptionUITests",
-            dependencies: ["SubscriptionUI"],
+            dependencies: ["SubscriptionUI", "SubscriptionOnboarding"],
             path: "Tests/SubscriptionUITests"
         ),
         .testTarget(

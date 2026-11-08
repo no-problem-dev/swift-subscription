@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `SubscriptionOnboarding`, a product holding `OnboardingPaywallStep` and its types with no
+  RevenueCat, so an app's presentation layer, which does not import RevenueCat, can use the step.
+  `SubscriptionUI` re-exports it, so `import SubscriptionUI` keeps working. `PackageDuration` moved
+  to a module without RevenueCat for the same reason; `Subscription` re-exports it.
+- `OnboardingPaywallContext.purchased(_:)` taking a `PackageDuration`, so a paywall can report a
+  purchase by the plan's length. The one taking a `SubscriptionPackage` stays, in `SubscriptionUI`.
+- `OnboardingPaywallStep(restore:)`. Given, the step draws "Restore Purchases" at the trailing end
+  of the ×'s row, disables the ways out while it runs, and ends with `.restored` when it answers
+  `true`. `OnboardingPaywallLabels.restore` (`購入を復元` in `.japanese`).
+- `OnboardingPaywallStep(impression:)`. `.byApp` sends no `paywall_shown`, so the app counts the
+  impression with its own tracking and `context.paywallId`.
+- `OnboardingPaywallContext.select(_:)` and `OnboardingPaywallStep(onClose:)`, which hands an
+  `OnboardingPaywallClose`: the `paywall_closed` with `product` set to the plan selected when the
+  customer closed without buying. Send it or the `.closed` from `onEvent`, not both.
+- `OnboardingPaywallIdentifier`: the fixed accessibility identifiers of the ×
+  (`onboarding_paywall.close`), "Restore Purchases" (`onboarding_paywall.restore`) and "Continue
+  for free" (`onboarding_paywall.continue_free`), for UI tests.
+
+### Changed
+- `OnboardingPaywallEvent.shown` is sent once the paywall has been on screen for a second with the
+  app in the foreground, the catalog's impression for `paywall_shown`, instead of the moment it
+  appeared. A paywall closed within that second sends no `paywall_shown`. `open_s` still counts
+  from the moment it appeared.
+
+### Removed
+- The dependency on `swift-docc-plugin`. The documentation is no longer published; Xcode's Build
+  Documentation works without it.
+
 ## [3.7.0] - 2026-11-08
 
 ### Added
