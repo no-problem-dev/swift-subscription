@@ -232,6 +232,16 @@ OnboardingPaywallStep(
 `auto`）・`product`・`open_s` も持つ。名前は共通のイベントのカタログに合わせてある。計測の SDK には
 依存しない。×の位置と「無料のまま続ける」を外す引数は無い。
 
+見た目はアプリの物にできる。×・「購入を復元」・「無料のまま続ける」に `ButtonStyle`（`.borderedProminent`
+のような PrimitiveButtonStyle も可）を渡す。場所と有無は変わらない。`SubscriptionOnboarding` を import
+すれば `PackageDuration` も書ける:
+
+```swift
+OnboardingPaywallStep(onFinish: { _ in }) { context in MyPaywall(context) }
+    .onboardingPaywallCloseButtonStyle(CircleCloseStyle())   // ラベルは 44pt 四方の xmark
+    .onboardingPaywallContinueFreeButtonStyle(.borderedProminent)
+```
+
 ## ドキュメント
 
 API ドキュメントと Getting Started は `Sources/*/*.docc/` の DocC にある。Xcode の Product › Build Documentation で開ける。
