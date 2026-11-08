@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `import SubscriptionOnboarding` is enough to name `PackageDuration`, the type
+  `OnboardingPaywallContext.select(_:)` and `purchased(_:)` take, as `import Subscription` already
+  is. `SubscriptionOnboarding` re-exports `SubscriptionPlan` with `@_exported`. The rule against
+  `@_exported` is about another package's module, whose API would then change with that package's
+  releases; `SubscriptionPlan` is a target of this package with no product of its own, so it
+  versions with this package and a product has to carry it for an app to reach it.
+- `onboardingPaywallCloseButtonStyle(_:)`, `onboardingPaywallRestoreButtonStyle(_:)` and
+  `onboardingPaywallContinueFreeButtonStyle(_:)`, taking a `ButtonStyle` or a
+  `PrimitiveButtonStyle`, so the ×, "Restore Purchases" and "Continue for free" of
+  `OnboardingPaywallStep` can take the app's look, such as a × in a white circle. Only the style:
+  where each button is, whether it is shown, its words, its accessibility identifier and when it
+  is enabled stay the step's. The ×'s label is the `xmark` symbol in a 44-point square. Without
+  them the step draws as before.
+
 ## [3.8.0] - 2026-11-08
 
 ### Added

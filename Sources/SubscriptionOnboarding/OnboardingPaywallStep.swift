@@ -1,5 +1,4 @@
 import SwiftUI
-import SubscriptionPlan
 
 /// The last step of onboarding: the app's own paywall, with the ways out that every app must have.
 ///
@@ -14,7 +13,9 @@ import SubscriptionPlan
 /// - **`source=onboarding`** on every event, with one `pw_id` per presentation
 /// - **fixed accessibility identifiers** on its buttons (``OnboardingPaywallIdentifier``)
 ///
-/// None of these has a parameter. An app that wants the × elsewhere, or no way to continue for
+/// The look of those buttons is the app's: `onboardingPaywallCloseButtonStyle(_:)`,
+/// `onboardingPaywallRestoreButtonStyle(_:)` and `onboardingPaywallContinueFreeButtonStyle(_:)` draw them with the app's
+/// `ButtonStyle`, in the same places. None of the rules above has a parameter. An app that wants the × elsewhere, or no way to continue for
 /// free, is asking for something App Store Review and the studio's rules both say no to.
 ///
 /// ```swift
@@ -50,6 +51,9 @@ public struct OnboardingPaywallStep<Paywall: View>: View {
     private let paywall: @MainActor (OnboardingPaywallContext) -> Paywall
 
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.onboardingPaywallCloseButtonStyle) private var closeButtonStyle
+    @Environment(\.onboardingPaywallRestoreButtonStyle) private var restoreButtonStyle
+    @Environment(\.onboardingPaywallContinueFreeButtonStyle) private var continueFreeButtonStyle
     @State private var paywallId = OnboardingPaywallEvent.makePaywallId()
     @State private var appearedAt: Date?
     @State private var hasSentShown = false
@@ -129,7 +133,7 @@ public struct OnboardingPaywallStep<Paywall: View>: View {
                 .frame(width: 44, height: 44)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .onboardingPaywallButtonStyle(closeButtonStyle, fallback: .plain)
         .accessibilityLabel(labels.close)
         .accessibilityIdentifier(OnboardingPaywallIdentifier.close)
         .disabled(isWorking || hasFinished)
@@ -145,7 +149,7 @@ public struct OnboardingPaywallStep<Paywall: View>: View {
                 .frame(minHeight: 44)
                 .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .onboardingPaywallButtonStyle(restoreButtonStyle, fallback: .plain)
         .accessibilityIdentifier(OnboardingPaywallIdentifier.restore)
         .disabled(isWorking || hasFinished)
         .padding(.trailing, 16)
@@ -159,6 +163,7 @@ public struct OnboardingPaywallStep<Paywall: View>: View {
                 .frame(maxWidth: .infinity, minHeight: 44)
                 .contentShape(Rectangle())
         }
+        .onboardingPaywallButtonStyle(continueFreeButtonStyle)
         .accessibilityIdentifier(OnboardingPaywallIdentifier.continueFree)
         .disabled(isWorking || hasFinished)
         .padding(.horizontal, 20)

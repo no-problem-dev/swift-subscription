@@ -258,6 +258,16 @@ When `restore` answers `false`, the step stays open: say on the paywall that not
 The step has no parameter for the position of the ×, of "Restore Purchases", or for leaving out
 "Continue for free".
 
+Their look is the app's. Give each its own `ButtonStyle` (or a primitive one such as
+`.borderedProminent`); they stay where they are:
+
+```swift
+OnboardingPaywallStep(onFinish: { _ in }) { context in MyPaywall(context) }
+    .onboardingPaywallCloseButtonStyle(CircleCloseStyle())   // label: xmark in a 44-pt square
+    .onboardingPaywallRestoreButtonStyle(.plain)
+    .onboardingPaywallContinueFreeButtonStyle(.borderedProminent)
+```
+
 Its buttons carry fixed accessibility identifiers for UI tests, in every language:
 
 | Button | Identifier (`OnboardingPaywallIdentifier`) |
