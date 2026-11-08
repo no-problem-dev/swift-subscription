@@ -156,7 +156,7 @@ them or assume a currency symbol. `price` is what the customer is charged and `p
 a derived marketing figure: making the second one the headline is the most common way to fail
 review here.
 
-``PackageDuration`` raw values are stable identifiers for logging, not labels. Switch over the
+`PackageDuration` raw values are stable identifiers for logging, not labels. Switch over the
 case to build a label your app owns and localizes.
 
 ## Purchase and restore

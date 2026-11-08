@@ -79,7 +79,6 @@ sandbox account.
 - ``SubscriptionUseCase/loadOffering(placement:)``
 - ``SubscriptionUseCase/purchase(packageId:from:)``
 - ``SubscriptionPackage``
-- ``PackageDuration``
 - ``IntroductoryOffer``
 - ``SubscriptionUseCase/trackPaywallImpression(source:offeringId:)``
 - ``SubscriptionUseCase/trackPaywallImpression(source:offering:)``
