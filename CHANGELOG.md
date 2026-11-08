@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.8.0] - 2026-11-08
+
 ### Added
 - `SubscriptionOnboarding`, a product holding `OnboardingPaywallStep` and its types with no
   RevenueCat, so an app's presentation layer, which does not import RevenueCat, can use the step.
