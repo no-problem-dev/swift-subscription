@@ -234,7 +234,7 @@ OnboardingPaywallStep(
 
 ## ドキュメント
 
-**[API ドキュメントと Getting Started](https://no-problem-dev.github.io/swift-subscription/documentation/subscription/)**
+API ドキュメントと Getting Started は `Sources/*/*.docc/` の DocC にある。Xcode の Product › Build Documentation で開ける。
 
 Getting Started に、前提となる App Store Connect / RevenueCat ダッシュボードの設定、
 権利の置き場所の選び方、ペイウォールの作り方、シミュレータでは確認できないことを

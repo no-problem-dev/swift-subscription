@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.7.0] - 2026-11-08
+
 ### Added
 - `OnboardingPaywallDecision.decide(offering:status:)` (`Subscription`), which decides whether
   onboarding ends on the paywall: `.skip(.entitled)` for an entitled customer,

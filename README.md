@@ -246,7 +246,7 @@ free".
 
 ## Documentation
 
-**[API documentation and Getting Started](https://no-problem-dev.github.io/swift-subscription/documentation/subscription/)**
+The DocC catalogs under `Sources/*/*.docc/` hold the API documentation and the Getting Started guide. Open them in Xcode with Product › Build Documentation.
 
 The Getting Started guide covers the App Store Connect and RevenueCat dashboard setup that
 has to be in place first, choosing where the entitlement is kept, building a paywall, and what
