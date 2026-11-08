@@ -29,6 +29,12 @@ answer current as renewals and expiries arrive.
 
 ## Usage
 
+`SubscriptionCore` holds the values and the port (`SubscriptionUseCase`, `SubscriptionOffering`,
+`SubscriptionPackage`, `SubscriptionStatus`, `SubscriptionError`) with no RevenueCat, so a
+presentation layer and its tests can use them without building the SDK. `Subscription` adds
+`SubscriptionUseCaseImpl`, the RevenueCat implementation, for the composition root, and
+re-exports `SubscriptionCore`.
+
 ```swift
 import Subscription
 

@@ -10,10 +10,18 @@ let package = Package(
         .macOS(.v14)
     ],
     products: [
-        // Entitlement state and the store calls that change it.
+        // Entitlement state and the store calls that change it, through RevenueCat. Re-exports
+        // `SubscriptionCore`, so `import Subscription` sees the values and the port too.
         .library(
             name: "Subscription",
             targets: ["Subscription"]
+        ),
+        // The values (offering, package, status, error) and the port (`SubscriptionUseCase`)
+        // with no RevenueCat, so an app's presentation layer and its tests can name them
+        // without building the SDK. The RevenueCat implementation stays in `Subscription`.
+        .library(
+            name: "SubscriptionCore",
+            targets: ["SubscriptionCore"]
         ),
         // The paywall at the end of onboarding: SwiftUI only, no RevenueCat, so an app's
         // presentation layer, which does not import RevenueCat, can draw it and test it.
@@ -46,10 +54,16 @@ let package = Package(
             name: "SubscriptionPlan",
             path: "Sources/SubscriptionPlan"
         ),
+        // The values and the port, with no RevenueCat. Re-exports `SubscriptionPlan`.
+        .target(
+            name: "SubscriptionCore",
+            dependencies: ["SubscriptionPlan"],
+            path: "Sources/SubscriptionCore"
+        ),
         .target(
             name: "Subscription",
             dependencies: [
-                "SubscriptionPlan",
+                "SubscriptionCore",
                 .product(name: "RevenueCat", package: "purchases-ios")
             ],
             path: "Sources/Subscription"
@@ -63,7 +77,7 @@ let package = Package(
         ),
         .target(
             name: "SubscriptionUI",
-            dependencies: ["Subscription", "SubscriptionOnboarding"],
+            dependencies: ["SubscriptionCore", "SubscriptionOnboarding"],
             path: "Sources/SubscriptionUI"
         ),
         .target(
@@ -82,13 +96,18 @@ let package = Package(
             path: "Tests/SubscriptionTests"
         ),
         .testTarget(
+            name: "SubscriptionCoreTests",
+            dependencies: ["SubscriptionCore"],
+            path: "Tests/SubscriptionCoreTests"
+        ),
+        .testTarget(
             name: "SubscriptionOnboardingTests",
             dependencies: ["SubscriptionOnboarding"],
             path: "Tests/SubscriptionOnboardingTests"
         ),
         .testTarget(
             name: "SubscriptionUITests",
-            dependencies: ["SubscriptionUI", "SubscriptionOnboarding"],
+            dependencies: ["SubscriptionUI", "SubscriptionCore", "SubscriptionOnboarding"],
             path: "Tests/SubscriptionUITests"
         ),
         .testTarget(

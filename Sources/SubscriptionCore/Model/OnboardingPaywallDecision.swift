@@ -80,7 +80,7 @@ public enum OnboardingPaywallDecision: Sendable, Hashable {
         return .show
     }
 
-    static func isSwitchedOff(_ value: String?) -> Bool {
+    package static func isSwitchedOff(_ value: String?) -> Bool {
         guard let value else { return false }
         return value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == switchedOffValue
     }

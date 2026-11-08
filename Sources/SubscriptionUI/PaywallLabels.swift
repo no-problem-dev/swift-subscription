@@ -1,5 +1,5 @@
 import Foundation
-import Subscription
+import SubscriptionCore
 
 /// The words on a paywall that this package puts there, so an app can localize them.
 ///

@@ -1,4 +1,4 @@
-import Subscription
+import SubscriptionCore
 import XCTest
 
 /// Covers the entitlement decision a process without a use case — a widget reading the app's

@@ -1,6 +1,6 @@
 import Foundation
 import XCTest
-@testable import Subscription
+@testable import SubscriptionCore
 
 final class PackagePriceAmountTests: XCTestCase {
     private func package(_ duration: PackageDuration, _ amount: Decimal, locale: Locale?) -> SubscriptionPackage {

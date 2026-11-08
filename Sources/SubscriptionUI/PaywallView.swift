@@ -1,5 +1,5 @@
 import SwiftUI
-import Subscription
+import SubscriptionCore
 
 /// A paywall's skeleton: the app's pages on top, and beneath them the plans, the purchase
 /// button, the restore button and the legal links.

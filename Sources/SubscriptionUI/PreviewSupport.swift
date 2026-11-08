@@ -1,5 +1,5 @@
 import Foundation
-import Subscription
+import SubscriptionCore
 
 public extension SubscriptionOffering {
     /// An offering with an annual and a monthly plan, for previews and paywall mock-ups.

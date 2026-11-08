@@ -53,7 +53,7 @@ public struct CachedEntitlement: Sendable, Equatable, Codable {
     }
 
     /// Records a status the store just confirmed.
-    init(status: SubscriptionStatus, userId: String?, confirmedAt: Date) {
+    package init(status: SubscriptionStatus, userId: String?, confirmedAt: Date) {
         self.init(
             isActive: status.isActive,
             entitlementId: status.activeEntitlementId,

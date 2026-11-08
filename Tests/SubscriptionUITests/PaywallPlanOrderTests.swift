@@ -1,4 +1,4 @@
-import Subscription
+import SubscriptionCore
 import XCTest
 @testable import SubscriptionUI
 

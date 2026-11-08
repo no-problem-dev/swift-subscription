@@ -1,4 +1,4 @@
-import Subscription
+import SubscriptionCore
 import Testing
 @testable import SubscriptionOnboarding
 import SubscriptionUI
