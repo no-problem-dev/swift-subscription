@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.10.0] - 2026-11-08
+
 ### Added
 - `SubscriptionCore`, a product holding the values and the port with no RevenueCat:
   `SubscriptionUseCase`, `SubscriptionOffering`, `SubscriptionPackage`, `SubscriptionStatus`,
