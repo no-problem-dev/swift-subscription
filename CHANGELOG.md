@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.9.0] - 2026-11-08
+
 ### Added
 - `import SubscriptionOnboarding` is enough to name `PackageDuration`, the type
   `OnboardingPaywallContext.select(_:)` and `purchased(_:)` take, as `import Subscription` already
