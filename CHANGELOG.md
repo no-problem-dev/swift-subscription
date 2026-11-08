@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `SubscriptionCore`, a product holding the values and the port with no RevenueCat:
+  `SubscriptionUseCase`, `SubscriptionOffering`, `SubscriptionPackage`, `SubscriptionStatus`,
+  `SubscriptionError`, `IntroductoryOffer`, `EntitlementVerification`, `OnboardingPaywallDecision`,
+  `SubscriptionConfiguration`, the `EntitlementCache` types and `\.subscriptionUseCase` in the
+  environment. An app's presentation layer and its tests can name them without building the SDK.
+  `Subscription` re-exports it, so `import Subscription` keeps working; `SubscriptionUseCaseImpl`,
+  the RevenueCat implementation, stays there. `SubscriptionCore` re-exports `SubscriptionPlan`.
+
+### Changed
+- `SubscriptionUI` depends on `SubscriptionCore` instead of `Subscription`, so it no longer builds
+  RevenueCat. A target that uses `SubscriptionUseCaseImpl` next to `SubscriptionUI` has to list
+  the `Subscription` product itself, as the apps already do.
+
 ## [3.9.0] - 2026-11-08
 
 ### Added

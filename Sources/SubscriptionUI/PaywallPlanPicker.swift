@@ -1,5 +1,5 @@
 import SwiftUI
-import Subscription
+import SubscriptionCore
 
 /// The list of plans, one selectable row each.
 ///

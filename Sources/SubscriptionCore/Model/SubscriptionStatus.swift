@@ -75,7 +75,7 @@ public struct SubscriptionStatus: Sendable, Equatable {
     ///
     /// The repository reports what the entitlement *is*; only the use case knows when it was
     /// asked, so the stamp is applied there rather than at the store boundary.
-    func confirmed(at date: Date) -> SubscriptionStatus {
+    package func confirmed(at date: Date) -> SubscriptionStatus {
         SubscriptionStatus(
             isActive: isActive,
             activeEntitlementId: activeEntitlementId,

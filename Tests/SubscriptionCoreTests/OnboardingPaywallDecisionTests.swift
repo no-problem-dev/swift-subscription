@@ -1,5 +1,5 @@
 import Foundation
-import Subscription
+import SubscriptionCore
 import Testing
 
 @Suite("オンボーディングの最後にペイウォールを出すか")

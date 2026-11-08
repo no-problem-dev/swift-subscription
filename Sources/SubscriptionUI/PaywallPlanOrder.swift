@@ -1,5 +1,5 @@
 import Foundation
-import Subscription
+import SubscriptionCore
 
 /// How ``PaywallView`` arranges an offering it loaded itself.
 ///

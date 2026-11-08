@@ -66,7 +66,7 @@ public struct SubscriptionPackage: Sendable, Identifiable {
         return Self.currencyString(amount, locale: priceLocale)
     }
 
-    static func currencyString(_ amount: Decimal, locale: Locale?) -> String? {
+    package static func currencyString(_ amount: Decimal, locale: Locale?) -> String? {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.locale = locale
@@ -265,7 +265,7 @@ public struct SubscriptionOffering: Sendable, Identifiable {
     }
 
     /// Splits the dashboard's metadata into its string values and the keys of everything else.
-    static func stringMetadata(_ raw: [String: Any]) -> (values: [String: String], dropped: Set<String>) {
+    package static func stringMetadata(_ raw: [String: Any]) -> (values: [String: String], dropped: Set<String>) {
         var values: [String: String] = [:]
         var dropped: Set<String> = []
         for (key, value) in raw {

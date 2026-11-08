@@ -1,4 +1,4 @@
-import Subscription
+import SubscriptionCore
 @_exported import SubscriptionOnboarding
 
 // The onboarding step lives in `SubscriptionOnboarding`, which has no RevenueCat. Re-exported here

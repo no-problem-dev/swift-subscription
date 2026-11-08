@@ -1,5 +1,5 @@
 import SwiftUI
-import Subscription
+import SubscriptionCore
 
 /// One plan, laid out so the amount the customer will actually be charged is the largest thing
 /// in the row.
