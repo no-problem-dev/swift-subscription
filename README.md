@@ -204,6 +204,46 @@ the placement to RevenueCat. `metadata` keeps only string values; the keys of nu
 objects are in `droppedMetadataKeys`, so a dashboard entry the app cannot read can be reported
 rather than silently ignored.
 
+### Ending onboarding on a paywall
+
+Every app ends its onboarding on a paywall the customer can close. Decide once, before onboarding
+starts, whether it appears; `OnboardingPaywallDecision` skips it for someone already entitled, when
+the offering's metadata sets `onboarding_paywall` to `off`, and when there is no price to show:
+
+```swift
+let offering = try? await subscriptionUseCase.loadOffering(placement: OnboardingPaywallDecision.placement)
+let status = await subscriptionUseCase.getSubscriptionStatus()
+let decision = OnboardingPaywallDecision.decide(offering: offering, status: status)
+// .show, or .skip(.entitled / .switchedOff / .nothingToSell)
+```
+
+Any value other than `off`, or no entry, leaves the paywall on, so a typo in the dashboard cannot
+take it away. When it is shown, wrap the app's own paywall in `OnboardingPaywallStep`
+(`SubscriptionUI`). The step draws the × in the top-leading corner and "Continue for free" beneath
+the paywall, always, and ends closing, continuing, buying and restoring in one `onFinish`:
+
+```swift
+OnboardingPaywallStep(
+    labels: .japanese,
+    onEvent: { event in analytics.send(event.name, event.parameters) },
+    onFinish: { exit in router.showHome(askForNotifications: exit.isEntitled) }
+) { context in
+    MyPaywall(
+        offering: offering,
+        paywallId: context.paywallId,     // the pw_id for the paywall's own paywall_* events
+        onWorking: context.setWorking,    // disables the ways out while a purchase is in flight
+        onPurchased: context.purchased,   // with the SubscriptionPackage that was bought
+        onRestored: context.restored
+    )
+}
+```
+
+`onEvent` receives `paywall_shown` and `paywall_closed` with `source=onboarding`, one `pw_id`,
+and, on closing, `result`, `via` (`close_button`, `continue_free`, or `auto` after a purchase or a
+restore), `product` and `open_s`, named as in the shared event catalog. The package depends on no
+analytics SDK. The step has no parameter for the position of the × or for leaving out "Continue for
+free".
+
 ## Documentation
 
 **[API documentation and Getting Started](https://no-problem-dev.github.io/swift-subscription/documentation/subscription/)**

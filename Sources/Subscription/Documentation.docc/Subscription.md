@@ -84,6 +84,11 @@ sandbox account.
 - ``SubscriptionUseCase/trackPaywallImpression(source:offeringId:)``
 - ``SubscriptionUseCase/trackPaywallImpression(source:offering:)``
 
+### Ending onboarding on a paywall
+
+- ``OnboardingPaywallDecision``
+- ``OnboardingPaywallSkipReason``
+
 ### SwiftUI integration
 
 - ``SubscriptionUseCaseModifier``

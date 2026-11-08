@@ -7,6 +7,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+### Added
+- `OnboardingPaywallDecision.decide(offering:status:)` (`Subscription`), which decides whether
+  onboarding ends on the paywall: `.skip(.entitled)` for an entitled customer,
+  `.skip(.switchedOff)` when the offering's metadata sets `onboarding_paywall` to `off`, and
+  `.skip(.nothingToSell)` when there is no offering or it has no packages. Any other value, a
+  non-string value or no entry shows it. `placement`, `source` and `metadataKey` name the
+  `onboarding` placement, the `onboarding` source and the metadata entry.
+- `OnboardingPaywallStep` (`SubscriptionUI`), which wraps the app's own paywall as the last step
+  of onboarding. It always draws a × in the top-leading corner and "Continue for free" beneath the
+  paywall, has no parameter to move or remove either, cannot be swiped away as a sheet, and ends
+  closing, continuing, buying and restoring in one `onFinish(OnboardingPaywallExit)`, once. The
+  paywall reports a purchase or a restore through `OnboardingPaywallContext`, which also carries
+  `source` and the presentation's `pw_id`.
+- `OnboardingPaywallEvent`, the `paywall_shown` and `paywall_closed` the step reports through
+  `onEvent`, named as in the shared event catalog (`source=onboarding`, `pw_id`, `result`, `via`
+  as `close_button` / `continue_free` / `auto`, `product`, `open_s`). The package still depends on
+  no analytics SDK. `OnboardingPaywallLabels` holds the two strings, with `.japanese`.
+
+Nothing existing changes.
+
 ## [3.6.1] - 2026-11-01
 
 ### Changed

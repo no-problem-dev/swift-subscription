@@ -194,6 +194,44 @@ ID でなく offering そのもので買い、表示を記録すると、placeme
 文字列の値だけを持つ。数・真偽値・オブジェクトの鍵は `droppedMetadataKeys` に入るので、読めない設定を
 黙って捨てずに知らせられる。
 
+### オンボーディングの最後にペイウォールを出す
+
+どのアプリもオンボーディングの最後に、閉じられるペイウォールを出す。出すかはオンボーディングを始める前に
+1 回だけ決める。`OnboardingPaywallDecision` は、購読中の人・offering の metadata の
+`onboarding_paywall` が `off` のとき・価格が無いときに出さない:
+
+```swift
+let offering = try? await subscriptionUseCase.loadOffering(placement: OnboardingPaywallDecision.placement)
+let status = await subscriptionUseCase.getSubscriptionStatus()
+let decision = OnboardingPaywallDecision.decide(offering: offering, status: status)
+// .show か .skip(.entitled / .switchedOff / .nothingToSell)
+```
+
+`off` 以外の値や値が無いときは出す。ダッシュボードの書き損じで消えない。出すときは、アプリのペイウォールを
+`OnboardingPaywallStep`（`SubscriptionUI`）で包む。左上の×とペイウォールの下の「無料のまま続ける」は
+いつも型が出し、閉じた・無料のまま続けた・買った・復元したを 1 つの `onFinish` にまとめる:
+
+```swift
+OnboardingPaywallStep(
+    labels: .japanese,
+    onEvent: { event in analytics.send(event.name, event.parameters) },
+    onFinish: { exit in router.showHome(askForNotifications: exit.isEntitled) }
+) { context in
+    MyPaywall(
+        offering: offering,
+        paywallId: context.paywallId,     // ペイウォール自身が送る paywall_* に付ける pw_id
+        onWorking: context.setWorking,    // 購入の間は×と「無料のまま続ける」を押せなくする
+        onPurchased: context.purchased,   // 買った SubscriptionPackage を渡す
+        onRestored: context.restored
+    )
+}
+```
+
+`onEvent` には `paywall_shown` と `paywall_closed` が届く。どちらも `source=onboarding` と同じ
+`pw_id` を持ち、閉じたときは `result`・`via`（`close_button`・`continue_free`、買った・復元したときは
+`auto`）・`product`・`open_s` も持つ。名前は共通のイベントのカタログに合わせてある。計測の SDK には
+依存しない。×の位置と「無料のまま続ける」を外す引数は無い。
+
 ## ドキュメント
 
 **[API ドキュメントと Getting Started](https://no-problem-dev.github.io/swift-subscription/documentation/subscription/)**
