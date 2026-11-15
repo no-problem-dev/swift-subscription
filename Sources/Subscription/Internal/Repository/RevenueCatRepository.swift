@@ -90,7 +90,7 @@ final class RevenueCatRepository: SubscriptionRepository {
                     )
                 },
                 priceAmount: package.storeProduct.price,
-                priceLocale: package.storeProduct.priceFormatter?.locale
+                priceLocale: Self.storefrontLocale(of: package.storeProduct)
             )
         }
 
@@ -238,7 +238,15 @@ final class RevenueCatRepository: SubscriptionRepository {
         Self.monthlyPriceString(
             duration: convertDuration(for: package),
             price: package.storeProduct.price,
-            locale: package.storeProduct.priceFormatter?.locale
+            locale: Self.storefrontLocale(of: package.storeProduct)
+        )
+    }
+
+    /// The customer's locale carrying the product's currency (``SubscriptionPackage/storefrontLocale(_:currencyCode:)``).
+    private static func storefrontLocale(of product: StoreProduct) -> Locale? {
+        SubscriptionPackage.storefrontLocale(
+            product.priceFormatter?.locale,
+            currencyCode: product.currencyCode ?? product.priceFormatter?.currencyCode
         )
     }
 

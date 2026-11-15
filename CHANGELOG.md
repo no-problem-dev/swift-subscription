@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/).
 
 ## [Unreleased]
 
+## [3.10.1] - 2026-11-15
+
+### Fixed
+- `pricePerMonth` and `formattedPrice(_:)` are written in the product's currency. A StoreKit 2
+  product carries no storefront locale, so the device locale came back alone and a USD price
+  read as won on a Korean-language device ("₩1"). `priceLocale` now carries the product's
+  currency code; the customer's digits and separators are kept.
+
 ## [3.10.0] - 2026-11-08
 
 ### Added
