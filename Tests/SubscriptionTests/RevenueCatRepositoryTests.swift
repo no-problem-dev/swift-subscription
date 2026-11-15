@@ -114,6 +114,17 @@ final class RevenueCatRepositoryTests: XCTestCase {
         XCTAssertFalse(unwrapped.contains("6000"), "年額のままの値が出ないこと: \(unwrapped)")
     }
 
+    func test_月額換算は端末の言語でなく商品の通貨で書く() throws {
+        let result = try XCTUnwrap(RevenueCatRepository.monthlyPriceString(
+            duration: .annual,
+            price: Decimal(string: "39.99")!,
+            locale: SubscriptionPackage.storefrontLocale(Locale(identifier: "ko_KR"), currencyCode: "USD")
+        ))
+
+        XCTAssertFalse(result.contains("₩"), result)
+        XCTAssertTrue(result.contains("3.33"), "39.99/12 が USD の小数で出ること: \(result)")
+    }
+
     func test_年額以外のパッケージは月額換算しない() {
         let locale = Locale(identifier: "en_US")
 

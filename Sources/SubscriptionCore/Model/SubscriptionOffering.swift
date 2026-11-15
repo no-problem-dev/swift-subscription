@@ -66,6 +66,20 @@ public struct SubscriptionPackage: Sendable, Identifiable {
         return Self.currencyString(amount, locale: priceLocale)
     }
 
+    /// The locale to format a store price in: the customer's locale for digits and separators,
+    /// with the product's own currency.
+    ///
+    /// A StoreKit 2 product does not carry its storefront locale, so RevenueCat hands back the
+    /// device locale next to the product's currency code. Formatting with that locale alone
+    /// writes a USD price in won on a Korean-language device; the currency has to travel with it.
+    package static func storefrontLocale(_ locale: Locale?, currencyCode: String?) -> Locale? {
+        guard let locale else { return nil }
+        guard let currencyCode, !currencyCode.isEmpty else { return locale }
+        var components = Locale.Components(locale: locale)
+        components.currency = Locale.Currency(currencyCode)
+        return Locale(components: components)
+    }
+
     package static func currencyString(_ amount: Decimal, locale: Locale?) -> String? {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency

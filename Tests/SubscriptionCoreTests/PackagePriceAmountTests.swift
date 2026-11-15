@@ -28,4 +28,27 @@ final class PackagePriceAmountTests: XCTestCase {
         XCTAssertNil(p.priceAmount)
         XCTAssertNil(p.priceLocale)
     }
+
+    func testStorefrontLocaleKeepsTheProductCurrencyOnAnotherLanguageDevice() throws {
+        let korean = Locale(identifier: "ko_KR")
+        let locale = try XCTUnwrap(SubscriptionPackage.storefrontLocale(korean, currencyCode: "USD"))
+        let annual = package(.annual, Decimal(string: "9.99")!, locale: locale)
+        let perMonth = try XCTUnwrap(annual.formattedPrice(annual.priceAmount! / 12))
+        XCTAssertFalse(perMonth.contains("₩"), perMonth)
+        XCTAssertTrue(perMonth.contains("0.83"), perMonth)
+    }
+
+    func testStorefrontLocaleWithoutACurrencyCodeIsTheLocale() {
+        let jp = Locale(identifier: "ja_JP")
+        XCTAssertEqual(SubscriptionPackage.storefrontLocale(jp, currencyCode: nil), jp)
+        XCTAssertNil(SubscriptionPackage.storefrontLocale(nil, currencyCode: "USD"))
+    }
+
+    func testStorefrontLocaleKeepsTheCustomerDigits() throws {
+        let arabic = Locale(identifier: "ar_SA@numbers=latn")
+        let locale = try XCTUnwrap(SubscriptionPackage.storefrontLocale(arabic, currencyCode: "USD"))
+        let text = try XCTUnwrap(package(.annual, 60, locale: locale).formattedPrice(5))
+        XCTAssertTrue(text.contains("5"), text)
+        XCTAssertFalse(text.contains("ر.س"), text)
+    }
 }
